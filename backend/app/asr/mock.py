@@ -43,7 +43,7 @@ class MockSpeechRecognizer(SpeechRecognizer):
         language: Optional[str] = None,
     ) -> ASRResult:
         """Simulate transcription on test audio."""
-        if audio is None or len(audio) == 0:
+        if audio is None:
             return ASRResult(
                 transcript="",
                 confidence=0.0,
@@ -56,8 +56,22 @@ class MockSpeechRecognizer(SpeechRecognizer):
                 model_version=self.model_version,
             )
 
-        duration = float(len(audio) / sample_rate)
-        rms = float(np.sqrt(np.mean(audio.astype(np.float32) ** 2) + 1e-9))
+        audio_flat = np.asarray(audio, dtype=np.float32).flatten()
+        if len(audio_flat) == 0:
+            return ASRResult(
+                transcript="",
+                confidence=0.0,
+                token_log_probs=[],
+                signal_availability=SignalAvailability.UNAVAILABLE,
+                language=language or "en",
+                duration_seconds=0.0,
+                inference_time_ms=0.5,
+                model_name=self.model_name,
+                model_version=self.model_version,
+            )
+
+        duration = float(len(audio_flat) / sample_rate)
+        rms = float(np.sqrt(np.mean(audio_flat ** 2) + 1e-9))
 
         # Test trigger simulation based on audio energy
         if rms > 0.05:

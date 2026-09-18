@@ -131,8 +131,9 @@ class WhisperSpeechRecognizer(SpeechRecognizer):
             )
 
         try:
-            # Normalize audio to float32 in [-1.0, 1.0]
-            audio_norm = np.clip(audio.astype(np.float32), -1.0, 1.0)
+            # Normalize audio to 1D float32 in [-1.0, 1.0]
+            audio_flat = np.asarray(audio, dtype=np.float32).flatten()
+            audio_norm = np.clip(audio_flat, -1.0, 1.0)
 
             # Target language: priority goes to method arg -> config setting -> None (auto-detect)
             target_lang = language or self.default_language
@@ -141,7 +142,7 @@ class WhisperSpeechRecognizer(SpeechRecognizer):
                 audio_norm,
                 beam_size=self.beam_size,
                 language=target_lang,
-                vad_filter=True,  # Built-in Silero VAD to skip silences
+                vad_filter=False,  # Audio is already pre-filtered by TrueVoice DSP VAD in pipeline
             )
 
             detected_language = info.language if hasattr(info, "language") else (target_lang or "unknown")

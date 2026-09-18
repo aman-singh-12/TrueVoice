@@ -43,11 +43,12 @@ class MockSpeakerVerifier(SpeakerVerifier):
 
     def _generate_embedding(self, audio: np.ndarray) -> np.ndarray:
         """Generate deterministic 192-d unit-normalized vector from audio FFT."""
-        if len(audio) == 0:
+        audio_flat = np.asarray(audio, dtype=np.float32).flatten()
+        if len(audio_flat) == 0:
             raise AudioProcessingError("Cannot extract embedding from empty audio in test fixture.")
 
         # Deterministic feature extraction via FFT magnitude spectrum
-        fft = np.abs(np.fft.rfft(audio[:min(len(audio), 4000)]))
+        fft = np.abs(np.fft.rfft(audio_flat[:min(len(audio_flat), 4000)]))
         seed_vals = np.resize(fft, 192).astype(np.float32)
         norm = float(np.linalg.norm(seed_vals)) + 1e-9
         return (seed_vals / norm).astype(np.float32)

@@ -95,7 +95,8 @@ class ECAPASpeakerVerifier(SpeakerVerifier):
         import torch
 
         # Preprocessing: Ensure 16kHz float32 1D audio clamped in [-1.0, 1.0]
-        audio_clean = np.clip(audio.astype(np.float32), -1.0, 1.0)
+        audio_flat = np.asarray(audio, dtype=np.float32).flatten()
+        audio_clean = np.clip(audio_flat, -1.0, 1.0)
         tensor = torch.as_tensor(audio_clean, dtype=torch.float32).unsqueeze(0).to(self.device)
 
         with torch.no_grad():

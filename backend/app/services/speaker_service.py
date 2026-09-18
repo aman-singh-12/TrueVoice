@@ -72,11 +72,11 @@ class SpeakerService:
                 continue
 
             pcm16, sr, channels = self.decoder.decode(raw_bytes)
-            # Resample to 16kHz mono float32
             resampled = self.resampler.resample_to_float32(pcm16, orig_sample_rate=sr)
             duration = len(resampled) / 16000.0
             if duration < 0.25:
-                logger.warning(f"Enrollment sample {idx} is very short ({duration:.2f}s)")
+                logger.warning(f"Enrollment sample {idx} is too short ({duration:.2f}s); skipping.")
+                continue
             total_duration += duration
             processed_samples.append(resampled)
 
