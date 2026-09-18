@@ -4,7 +4,7 @@
 
 ### Project Name
 
-**VoiceShield** — AI-Powered Real-Time Voice Integrity Verification System
+***TrueVoice — AI-Powered Real-Time Voice Integrity & Impersonation Detection System
 
 ### Problem Statement
 
