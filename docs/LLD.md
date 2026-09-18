@@ -1,5 +1,6 @@
 # Low-Level Design (LLD): TrueVoice
-## AI-Powered Real-Time Voice Integrity & Impersonation Detection System
+## AI-Powered Real-Time Voice Integrity & Impersonation Attack Prevention System
+### Document Version: 1.2.0-SCOPED (Implementation-Ready Baseline)
 
 ---
 
@@ -7,598 +8,652 @@
 
 | Attribute | Specification |
 | :--- | :--- |
-| **Project Name** | TrueVoice (VoiceShield Engine) |
+| **Project Name** | TrueVoice |
 | **Document Type** | Low-Level Design (LLD) Document |
-| **Document Version**| 1.0.0-PROD |
+| **Document Version**| 1.2.0-SCOPED |
 | **Status** | Approved for Implementation |
-| **Target Platforms** | Linux (Ubuntu 22.04 LTS / Debian 12), Containerized (Docker, K8s) |
-| **Language Runtimes** | Python 3.11+ (Backend/ML), Node.js v20 LTS (Frontend) |
-| **Primary Frameworks**| FastAPI, PyTorch, Librosa/Torchaudio, Next.js 14, React, Tailwind CSS |
-| **Classification** | Confidential / Enterprise Security Architecture |
+| **Target Platforms** | Linux (Ubuntu 22.04 LTS / Debian 12), Containerized (Docker Compose / Single VM) |
+| **Language Runtimes** | Python 3.11+ (Backend / ML Workers), Node.js v20 LTS (Frontend Console) |
+| **Primary Frameworks**| FastAPI, PyTorch, SpeechBrain, faster-whisper, Next.js 14, Tailwind CSS |
+| **Classification** | Enterprise Security Architecture / SIH Innovation Challenge Baseline |
 
 ---
 
 ## Table of Contents
-1. [Executive Summary & Architectural Context](#1-executive-summary--architectural-context)
-2. [Subsystem 1: Audio Ingestion & Preprocessing Pipeline](#2-subsystem-1-audio-ingestion--preprocessing-pipeline)
-3. [Subsystem 2: AI/ML Inference & Voice Analysis Pipeline](#3-subsystem-2-aiml-inference--voice-analysis-pipeline)
-4. [Subsystem 3: Contextual Risk Scoring & Fusion Engine](#4-subsystem-3-contextual-risk-scoring--fusion-engine)
-5. [Subsystem 4: Backend Microservices & API Architecture](#5-subsystem-4-backend-microservices--api-architecture)
-6. [Subsystem 5: Database Schema & Vector Persistence Layer](#6-subsystem-5-database-schema--vector-persistence-layer)
-7. [Subsystem 6: Security Decisioning, Policy & Alert Workflows](#7-subsystem-6-security-decisioning-policy--alert-workflows)
-8. [Subsystem 7: Tamper-Evident Cryptographic Audit Ledger](#8-subsystem-7-tamper-evident-cryptographic-audit-ledger)
-9. [Subsystem 8: Frontend Client & Real-Time Monitoring Dashboard](#9-subsystem-8-frontend-client--real-time-monitoring-dashboard)
-10. [Data Privacy, Biometric Protection & Threat Modeling](#10-data-privacy-biometric-protection--threat-modeling)
-11. [Deployment, Infrastructure & Concurrency Sizing](#11-deployment-infrastructure--concurrency-sizing)
-12. [Verification & Acceptance Criteria Checklist](#12-verification--acceptance-criteria-checklist)
+1. [Executive Summary & Architectural Baseline](#1-executive-summary--architectural-baseline)
+2. [Concrete Project Directory Layout (MVP)](#2-concrete-project-directory-layout-mvp)
+3. [Subsystem 1: Audio Ingestion, Sample-Rate Negotiation & Preprocessing](#3-subsystem-1-audio-ingestion-sample-rate-negotiation--preprocessing)
+4. [Subsystem 2: Parallel AI/ML Inference & Feature Extraction Pipeline](#4-subsystem-2-parallel-aiml-inference--feature-extraction-pipeline)
+5. [Subsystem 3: Context & Behavioral Intelligence Engine](#5-subsystem-3-context--behavioral-intelligence-engine)
+6. [Subsystem 4: Dynamic Risk Intelligence & Multi-Signal Fusion](#6-subsystem-4-dynamic-risk-intelligence--multi-signal-fusion)
+7. [Subsystem 5: Zero-Trust State Machine & Declarative Policy Engine](#7-subsystem-5-zero-trust-state-machine--declarative-policy-engine)
+8. [Subsystem 6: Secondary Verification & Out-of-Band Workflows](#8-subsystem-6-secondary-verification--out-of-band-workflows)
+9. [Subsystem 7: Database Persistence & Vector Schema (PostgreSQL + pgvector)](#9-subsystem-7-database-persistence--vector-schema-postgresql--pgvector)
+10. [Subsystem 8: API & Streaming Protocol Specifications (REST & WebSockets)](#10-subsystem-8-api--streaming-protocol-specifications-rest--websockets)
+11. [Subsystem 9: Cryptographic Audit Ledger & Tamper Evidence](#11-subsystem-9-cryptographic-audit-ledger--tamper-evidence)
+12. [Subsystem 10: Frontend Operations Console & AudioWorklet Client](#12-subsystem-10-frontend-operations-console--audioworklet-client)
+13. [Subsystem 11: Failure Handling, Signal Conflicts & Fail-Safe Mitigations](#13-subsystem-11-failure-handling-signal-conflicts--fail-safe-mitigations)
+14. [Subsystem 12: Engineering Latency Budgets & Validation Checklist](#14-subsystem-12-engineering-latency-budgets--validation-checklist)
 
 ---
 
-## 1. Executive Summary & Architectural Context
+## 1. Executive Summary & Architectural Baseline
 
-TrueVoice is an enterprise-grade, real-time voice integrity and deepfake detection engine designed to thwart synthetic audio impersonation attacks during high-stakes voice communications (e.g., banking fund transfers, executive authorizations, privileged credential verification).
+TrueVoice is an applied voice security and identity intelligence platform that continuously evaluates voice authenticity, biometric speaker identity, conversational intent, signal forensics, and operational context to detect and mitigate voice cloning and impersonation attacks.
 
-The low-level design specifies:
-- **Streaming Pipeline**: Sub-300ms chunk processing pipeline using WebSockets, WebRTC, and Circular Audio Ring Buffers.
-- **Dual-Stream ML Inference**: Parallelized inference workers executing **Synthetic Speech Detection** (Self-Supervised Wav2Vec 2.0 / AASIST) and **Speaker Verification** (ECAPA-TDNN 192-d embeddings).
-- **Multi-Factor Risk Fusion**: Dynamic Bayesian/sigmoid mathematical score aggregation combining acoustic deepfake probability, voiceprint cosine distance, prosodic anomalies, and caller transactional context.
-- **Zero-Raw-Voice Retention**: Strict ephemeral memory processing complying with GDPR and India's Digital Personal Data Protection (DPDP) Act 2023.
-- **Cryptographic Auditability**: SHA-256 linked-event hash chain with Merkle tree anchoring for non-repudiation.
+### 1.1 Architectural Scope Distinction
+* **Implemented in SIH MVP**: Streaming audio ingestion over WebSockets, runtime sample-rate canonicalization, two-branch preprocessing (ML-normalized vs minimally processed forensic branch), Silero VAD, fine-tuned Wav2Vec 2.0 / WavLM deepfake detection head, ECAPA-TDNN speaker verification, DSP acoustic forensics, faster-whisper streaming ASR, rule-based social-engineering intent extraction, rule-based context intelligence, multi-signal risk fusion with temporal smoothing, deterministic Zero-Trust State Machine with human review exits, declarative policy action evaluator, simulated out-of-band verification challenge, simulated application workflow locking, PostgreSQL with pgvector, and in-database SHA-256 hash-chained audit logging.
+* **Future Enterprise Scope**: AASIST graph neural network ensembles, carrier-grade SIP/RTP PBX trunking (Kamailio / Asterisk), multi-lingual Dravidian IndicConformer models, hardware-backed FIDO2 mobile enclave integration, ISO 20022 banking core API connectors, Redis Streams distributed worker clusters, and external blockchain anchor notaries.
 
-### 1.1 End-to-End Component Interaction Diagram
+### 1.2 End-to-End Component Flow (MVP In-Process Execution)
 
 ```mermaid
 flowchart TB
-    subgraph ClientLayer ["Client Layer (Browser / Softphone / VoIP)"]
-        UI["Web Dashboard / Next.js"]
-        AudioWorklet["AudioWorklet Node (PCM 16kHz)"]
+    subgraph ClientLayer ["Client Layer (Browser / Simulated Softphone)"]
+        UI["Web Operations Console / Next.js 14"]
+        AudioWorklet["AudioWorklet Node (Runtime Capture Rate)"]
         WSClient["WebSocket Client"]
         AudioWorklet --> WSClient
     end
 
     subgraph IngestionLayer ["Ingestion & Preprocessing Layer"]
-        WSEndpoint["FastAPI WebSocket Server (/ws/audio/{session_id})"]
-        RingBuffer["Circular Audio Ring Buffer"]
-        VAD["Voice Activity Detector (Silero VAD)"]
-        Normalizer["Audio Normalizer & Window Slicer (2s window / 0.5s stride)"]
+        WSEndpoint["FastAPI WebSocket Server (/v1/stream/{session_id})"]
+        Resampler["Backend Polyphase Resampler (-> 16kHz Mono)"]
+        VAD["Voice Activity Detector (Silero VAD ONNX)"]
+        RingBuffer["Circular Ring Buffer (2.0s window / 0.5s hop)"]
+        TwoBranch{"Two-Branch Split"}
+        B_Norm["ML Branch (RMS Normalized: -24 dBFS)"]
+        B_Raw["Forensic Branch (Minimally Processed)"]
         
-        WSClient -->|Binary PCM 16-bit| WSEndpoint
-        WSEndpoint --> RingBuffer
-        RingBuffer --> VAD
-        VAD -->|Active Speech Chunks| Normalizer
+        WSClient -->|Binary PCM + Rate Header| WSEndpoint
+        WSEndpoint --> Resampler
+        Resampler --> VAD
+        VAD -->|Active Speech| RingBuffer
+        RingBuffer --> TwoBranch
+        TwoBranch --> B_Norm & B_Raw
     end
 
-    subgraph InferenceLayer ["AI/ML Inference Pipeline (Async Workers)"]
-        DeepfakeWorker["Deepfake Detector (Wav2Vec2 / AASIST)"]
-        SpeakerWorker["Speaker Verifier (ECAPA-TDNN)"]
-        ProsodyWorker["Prosodic / Acoustic Analyzer (F0, Jitter, Shimmer)"]
+    subgraph InferenceLayer ["Inference Coordinator (ThreadPoolExecutor)"]
+        Coordinator["Inference Coordinator (Thread Pool Orchestrator)"]
+        DeepfakeWorker["Deepfake Detector (Wav2Vec2 / WavLM)"]
+        SpeakerWorker["Speaker Verifier (ECAPA-TDNN 192-d)"]
+        ForensicWorker["Acoustic Forensics (F0, Jitter, Shimmer, HNR)"]
+        ASRWorker["Streaming ASR (faster-whisper INT8)"]
+        IntentWorker["Social-Engineering Intent Analyzer (Regex/NLP)"]
         
-        Normalizer --> DeepfakeWorker
-        Normalizer --> SpeakerWorker
-        Normalizer --> ProsodyWorker
+        B_Norm --> Coordinator
+        B_Raw --> Coordinator
+        Coordinator --> DeepfakeWorker
+        Coordinator --> SpeakerWorker
+        Coordinator --> ForensicWorker
+        Coordinator --> ASRWorker
+        ASRWorker --> IntentWorker
     end
 
-    subgraph StorageLayer ["Persistence & Cache"]
-        RedisPubSub["Redis Pub/Sub & Session Cache"]
-        PGDB[(PostgreSQL 16 + pgvector)]
+    subgraph StorageLayer ["Persistence & Ephemeral State"]
+        RedisBus[("Redis 7 (Session Cache & Pub/Sub)")]
+        PGDB[("PostgreSQL 16 + pgvector")]
     end
 
-    subgraph EngineLayer ["Core Decision Engines"]
-        ContextEngine["Contextual Risk Evaluator"]
-        RiskEngine["Dynamic Risk Fusion Engine"]
-        PolicyEngine["Security Policy & Action Dispatcher"]
-        AuditEngine["Cryptographic Audit Logger (SHA-256 Chain)"]
+    subgraph EngineLayer ["Decision & Policy Layer"]
+        ContextEngine["Context & Metadata Evaluator"]
+        RiskEngine["Dynamic Risk Intelligence Engine (Fusion)"]
+        TrustSM["Zero-Trust State Machine"]
+        PolicyEngine["Declarative Policy & Action Engine"]
+        AuditEngine["Tamper-Evident SHA-256 Hash Chainer"]
         
         DeepfakeWorker --> RiskEngine
         SpeakerWorker --> RiskEngine
-        ProsodyWorker --> RiskEngine
+        ForensicWorker --> RiskEngine
+        IntentWorker --> RiskEngine
         ContextEngine --> RiskEngine
-        RiskEngine --> PolicyEngine
+        
+        RiskEngine --> TrustSM
+        TrustSM --> PolicyEngine
         PolicyEngine --> AuditEngine
-        RiskEngine --> RedisPubSub
-        PolicyEngine --> RedisPubSub
+        PolicyEngine --> RedisBus
+        RiskEngine --> RedisBus
     end
 
-    RedisPubSub -->|Telemetry & Alert Events| WSEndpoint
-    WSEndpoint -->|JSON Alerts & Spectrum Data| UI
+    RedisBus -->|Telemetry & Risk Updates| WSEndpoint
+    WSEndpoint -->|JSON Event Stream| UI
     AuditEngine --> PGDB
-    SpeakerWorker <-->|Vector Retrieval| PGDB
+    SpeakerWorker <-->|HNSW Cosine Query| PGDB
 ```
 
 ---
 
-## 2. Subsystem 1: Audio Ingestion & Preprocessing Pipeline
+## 2. Concrete Project Directory Layout (MVP)
 
-### 2.1 Audio Specification & Constraints
-All incoming audio must conform to or be resampled to the following internal standard before passing to downstream neural networks:
-
-| Parameter | Value | Notes |
-| :--- | :--- | :--- |
-| **Sampling Rate ($f_s$)** | $16,000 \text{ Hz}$ ($16 \text{ kHz}$) | Native standard for Wav2Vec2 and ECAPA-TDNN |
-| **Channel Layout** | Mono ($1 \text{ channel}$) | Downmixed if stereo input received |
-| **Bit Depth / Format** | $16\text{-bit Signed Linear PCM}$ (LE) | Converted to Float32 $[-1.0, 1.0]$ in buffer |
-| **Frame Window Size** | $2.0 \text{ seconds}$ ($32,000 \text{ samples}$) | Optimal context for spectral artifact detection |
-| **Sliding Window Hop** | $0.5 \text{ seconds}$ ($8,000 \text{ samples}$) | Yields 2 inferences/sec update frequency |
-| **VAD Threshold** | $p > 0.5$ speech confidence | Minimum active frames: 80% per chunk |
-
-### 2.2 Class Design & Signatures
-
-```mermaid
-classDiagram
-    class AudioStreamManager {
-        -str session_id
-        -CircularAudioBuffer buffer
-        -SileroVAD vad_detector
-        -AudioNormalizer normalizer
-        +receive_bytes(bytes pcm_data) void
-        +get_next_chunk() Optional~AudioChunk~
-        +flush() void
-    }
-
-    class CircularAudioBuffer {
-        -int capacity_samples
-        -np.ndarray memory_buffer
-        -int write_head
-        -int read_head
-        -int available_samples
-        +write(np.ndarray samples) int
-        +peek(int num_samples) np.ndarray
-        +advance(int num_samples) void
-        +clear() void
-    }
-
-    class SileroVAD {
-        -torch.jit.ScriptModule model
-        -float threshold
-        -int sampling_rate
-        +is_speech(np.ndarray chunk) bool
-        +filter_speech_segments(np.ndarray audio) np.ndarray
-    }
-
-    class AudioNormalizer {
-        -float target_dbfs
-        +peak_normalize(np.ndarray audio) np.ndarray
-        +loudness_normalize(np.ndarray audio) np.ndarray
-        +resample_if_needed(np.ndarray audio, int orig_sr) np.ndarray
-    }
-
-    class AudioChunk {
-        +str chunk_id
-        +str session_id
-        +float timestamp_start
-        +float timestamp_end
-        +np.ndarray pcm_data
-        +float speech_ratio
-        +float rms_energy
-    }
-
-    AudioStreamManager *-- CircularAudioBuffer
-    AudioStreamManager *-- SileroVAD
-    AudioStreamManager *-- AudioNormalizer
-    AudioStreamManager ..> AudioChunk : Produces
+```text
+truevoice/
+├── backend/
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py                     # FastAPI application factory & lifespan
+│   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   ├── v1/
+│   │   │   │   ├── auth.py             # Login, JWT issuance, RBAC dependencies
+│   │   │   │   ├── sessions.py         # Session lifecycle management
+│   │   │   │   ├── speakers.py         # Biometric speaker profile enrollment
+│   │   │   │   ├── verify.py           # Out-of-band verification challenge endpoints
+│   │   │   │   ├── audit.py            # Audit ledger verification & query endpoints
+│   │   │   │   └── websocket.py        # Streaming audio ingest & broadcast endpoint
+│   │   ├── core/
+│   │   │   ├── config.py               # Pydantic v2 settings & environment variables
+│   │   │   ├── database.py             # SQLAlchemy 2.0 async engine & sessionmaker
+│   │   │   ├── redis.py                # Redis client connection pool
+│   │   │   └── security.py             # Password hashing, JWT token validation
+│   │   ├── models/                     # SQLAlchemy ORM entity models
+│   │   │   ├── organization.py
+│   │   │   ├── user.py
+│   │   │   ├── speaker_profile.py
+│   │   │   ├── call_session.py
+│   │   │   ├── risk_assessment.py
+│   │   │   ├── conversation.py
+│   │   │   ├── verification_event.py
+│   │   │   ├── security_action.py
+│   │   │   ├── model_version.py
+│   │   │   └── audit_log.py
+│   │   ├── schemas/                    # Pydantic validation models (DTOs)
+│   │   │   ├── session.py
+│   │   │   ├── speaker.py
+│   │   │   ├── telemetry.py
+│   │   │   ├── policy.py
+│   │   │   └── audit.py
+│   │   ├── services/                   # Business logic layer
+│   │   │   ├── session_service.py
+│   │   │   ├── enrollment_service.py
+│   │   │   └── verification_service.py
+│   │   ├── ml/                         # AI & Digital Signal Processing adapters
+│   │   │   ├── audio_buffer.py         # Circular audio buffer & windowing
+│   │   │   ├── resampler.py            # Polyphase FIR resampler (client -> 16kHz)
+│   │   │   ├── vad.py                  # Silero VAD ONNX wrapper
+│   │   │   ├── deepfake_detector.py    # Wav2Vec2 / WavLM classification head
+│   │   │   ├── speaker_verifier.py     # SpeechBrain ECAPA-TDNN 192-d extractor
+│   │   │   ├── forensics.py            # DSP Jitter, Shimmer, HNR, F0 extractor
+│   │   │   ├── asr_engine.py           # faster-whisper streaming transcription
+│   │   │   ├── intent_analyzer.py      # Regex trie + lightweight NLP classifier
+│   │   │   └── coordinator.py          # Thread pool executor for blocking inference
+│   │   ├── context/
+│   │   │   └── engine.py               # Rule-based context & metadata risk scorer
+│   │   ├── risk/
+│   │   │   ├── engine.py               # Multi-signal mathematical fusion & EMA
+│   │   │   └── normalizer.py           # Dynamic weight re-normalization
+│   │   ├── policy/
+│   │   │   ├── state_machine.py        # Zero-Trust State Machine implementation
+│   │   │   └── engine.py               # Declarative tenant policy evaluator
+│   │   ├── audit/
+│   │   │   ├── hasher.py               # Canonical JSON & SHA-256 block chainer
+│   │   │   └── verifier.py             # Chain integrity validation script
+│   │   └── utils/
+│   │       └── logging.py              # Structured JSON logging
+│   ├── tests/
+│   │   ├── test_audio_buffer.py
+│   │   ├── test_risk_engine.py
+│   │   ├── test_state_machine.py
+│   │   └── test_audit_chain.py
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend/
+│   ├── app/
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   └── dashboard/
+│   │       ├── page.tsx                # Active calls overview
+│   │       └── live/[id]/page.tsx      # Real-time monitored session console
+│   ├── components/
+│   │   ├── AudioSpectrumVisualizer.tsx
+│   │   ├── DynamicRiskGauge.tsx
+│   │   ├── FactorBreakdownRadar.tsx
+│   │   ├── IncidentTimeline.tsx
+│   │   ├── SecurityActionPanel.tsx
+│   │   └── TrustStateBadge.tsx
+│   ├── hooks/
+│   │   ├── useAudioStream.ts           # WebAudio API AudioWorklet hook
+│   │   └── useSessionRisk.ts           # WebSocket telemetry listener
+│   ├── public/
+│   │   └── truevoice-worklet.js        # Runtime capture AudioWorkletProcessor script
+│   ├── types/
+│   │   └── telemetry.ts
+│   ├── package.json
+│   └── Dockerfile
+├── infra/
+│   ├── docker-compose.yml              # Complete multi-service local deployment
+│   ├── postgres/
+│   │   └── init.sql                    # Initial schema DDL and pgvector extension
+│   └── nginx/
+│       └── default.conf                # Reverse proxy for REST & WebSockets
+└── README.md
 ```
 
-### 2.3 Detailed Implementation Logic
+---
 
-#### 2.3.1 Circular Audio Ring Buffer
-To avoid dynamic allocation and garbage collection stalls during active WebSocket streaming, memory is pre-allocated in a continuous numpy array:
+## 3. Subsystem 1: Audio Ingestion, Sample-Rate Negotiation & Preprocessing
+
+### 3.1 Runtime Sample-Rate Negotiation & Backend Canonicalization
+* **Browser Capture Reality:** Web browsers capture audio at the operating system's hardware rate (commonly 44,100 Hz or 48,000 Hz). The client AudioWorklet captures samples at the native `sampleRate` and streams signed 16-bit linear PCM frames along with a handshake header specifying the source rate.
+* **Backend Format Boundary:** The backend receives raw PCM frames and executes polyphase FIR resampling using `scipy.signal.resample_poly` or C++ `libsamplerate` to convert incoming audio to the internal master standard: **16,000 Hz, 16-bit Signed Linear PCM, Mono channel**.
+* **Sliding Window Sizing:**
+  - Window Size: $2.0 \text{ seconds}$ ($32,000 \text{ samples} @ 16\text{kHz}$).
+  - Stride / Hop Size: $0.5 \text{ seconds}$ ($8,000 \text{ samples}$).
+  - Refresh Rate: $2.0 \text{ updates / second}$.
+
+### 3.2 Two-Branch Audio Processing Pipeline
+To prevent artificial volume adjustments from corrupting delicate forensic micro-tremors:
+1. **ML-Normalized Branch:** Audio chunks destined for deepfake detection (Wav2Vec2/WavLM), speaker verification (ECAPA-TDNN), and ASR (Whisper) are scaled via Root Mean Square (RMS) normalization to $-24\text{ dBFS}$ with a $-1.0\text{ dBFS}$ peak limiter.
+2. **Minimally Processed Forensic Branch:** Audio chunks routed to the Acoustic Forensics Engine (F0, Jitter, Shimmer, HNR) bypass amplitude normalization, preserving the natural physical dynamics and transmission artifacts.
 
 ```python
-# Pseudo-code specification for CircularAudioBuffer
+# backend/app/ml/audio_buffer.py
 import numpy as np
+from typing import Tuple, Optional
 
 class CircularAudioBuffer:
-    def __init__(self, max_seconds: float = 10.0, sample_rate: int = 16000):
-        self.capacity = int(max_seconds * sample_rate)
-        self.buffer = np.zeros(self.capacity, dtype=np.float32)
-        self.write_pos = 0
-        self.size = 0
+    def __init__(self, capacity_seconds: float = 10.0, sample_rate: int = 16000):
+        self.capacity: int = int(capacity_seconds * sample_rate)
+        self.sample_rate: int = sample_rate
+        self.buffer: np.ndarray = np.zeros(self.capacity, dtype=np.float32)
+        self.write_head: int = 0
+        self.available_samples: int = 0
 
-    def write(self, samples: np.ndarray) -> None:
+    def write_pcm16_samples(self, samples: np.ndarray) -> None:
+        """Writes float32 [-1.0, 1.0] samples into the ring buffer."""
         n = len(samples)
-        if n > self.capacity:
+        if n == 0:
+            return
+        if n >= self.capacity:
             samples = samples[-self.capacity:]
             n = self.capacity
-            
-        end_pos = (self.write_pos + n) % self.capacity
-        if self.write_pos + n <= self.capacity:
-            self.buffer[self.write_pos:self.write_pos + n] = samples
+
+        end_head = (self.write_head + n) % self.capacity
+        if self.write_head + n <= self.capacity:
+            self.buffer[self.write_head : self.write_head + n] = samples
         else:
-            first_part = self.capacity - self.write_pos
-            self.buffer[self.write_pos:] = samples[:first_part]
-            self.buffer[:end_pos] = samples[first_part:]
-            
-        self.write_pos = end_pos
-        self.size = min(self.capacity, self.size + n)
+            first_part = self.capacity - self.write_head
+            self.buffer[self.write_head :] = samples[:first_part]
+            self.buffer[:end_head] = samples[first_part:]
 
-    def extract_window(self, window_size: int) -> np.ndarray:
-        if self.size < window_size:
-            raise ValueError("Insufficient samples in ring buffer")
-        start_pos = (self.write_pos - window_size) % self.capacity
-        if start_pos + window_size <= self.capacity:
-            return self.buffer[start_pos:start_pos + window_size].copy()
-        first_part = self.capacity - start_pos
-        return np.concatenate([
-            self.buffer[start_pos:],
-            self.buffer[:window_size - first_part]
-        ])
+        self.write_head = end_head
+        self.available_samples = min(self.capacity, self.available_samples + n)
+
+    def extract_two_branch_window(self, window_seconds: float = 2.0) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+        """
+        Extracts synchronized audio chunks for both branches:
+        Returns: (normalized_ml_chunk, raw_forensic_chunk)
+        """
+        window_samples = int(window_seconds * self.sample_rate)
+        if self.available_samples < window_samples:
+            return None
+
+        start_head = (self.write_head - window_samples) % self.capacity
+        if start_head + window_samples <= self.capacity:
+            raw_chunk = self.buffer[start_head : start_head + window_samples].copy()
+        else:
+            first_len = self.capacity - start_head
+            raw_chunk = np.concatenate([
+                self.buffer[start_head:],
+                self.buffer[: window_samples - first_len]
+            ])
+
+        # Forensic Branch: Raw unaltered audio chunk
+        forensic_chunk = raw_chunk.copy()
+
+        # ML Branch: Peak and RMS normalized to -24 dBFS
+        rms = np.sqrt(np.mean(raw_chunk**2) + 1e-9)
+        target_rms = 10.0 ** (-24.0 / 20.0)
+        gain = target_rms / rms
+        normalized_chunk = np.clip(raw_chunk * gain, -1.0, 1.0)
+
+        return normalized_chunk, forensic_chunk
 ```
-
-#### 2.3.2 Voice Activity Detection (VAD) Execution Policy
-Chunks are strictly discarded from deepfake evaluation if speech presence is insufficient:
-- Run Silero VAD over 30ms non-overlapping mini-frames.
-- Calculate $\text{SpeechRatio} = \frac{\sum \text{SpeechFrames}}{\text{TotalFrames}}$.
-- If $\text{SpeechRatio} < 0.60$, the chunk is classified as `AMBIENT_SILENCE` or `BACKGROUND_NOISE`, bypassing neural deepfake models and retaining the previous risk score decay factor.
 
 ---
 
-## 3. Subsystem 2: AI/ML Inference & Voice Analysis Pipeline
+## 4. Subsystem 2: Parallel AI/ML Inference & Feature Extraction Pipeline
 
-The inference subsystem consists of three parallel analyzers running asynchronously over each valid `AudioChunk`.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Chunker as AudioStreamManager
-    participant Coordinator as InferenceCoordinator
-    participant Deepfake as DeepfakeDetector (AASIST/Wav2Vec2)
-    participant Speaker as SpeakerVerifier (ECAPA-TDNN)
-    participant Prosody as ProsodyAnalyzer
-    participant VectorDB as Vector Store (pgvector)
-    participant Fusion as RiskFusionEngine
-
-    Chunker->>Coordinator: dispatch(AudioChunk [2.0s, Float32])
-    
-    par Deepfake Analysis
-        Coordinator->>Deepfake: predict_synthetic_prob(pcm_data)
-        Deepfake-->>Coordinator: SyntheticResult(p_synth=0.92, confidence=0.88)
-    and Speaker Verification
-        Coordinator->>Speaker: verify_speaker(pcm_data, claimed_identity_id)
-        Speaker->>VectorDB: fetch_enrolled_embedding(claimed_identity_id)
-        VectorDB-->>Speaker: baseline_vector [192-d]
-        Speaker-->>Coordinator: SpeakerResult(similarity=0.34, is_match=False)
-    and Acoustic/Prosodic Analysis
-        Coordinator->>Prosody: analyze_prosody(pcm_data)
-        Prosody-->>Coordinator: ProsodyResult(jitter=0.045, shimmer=0.082, f0_entropy=0.12)
-    end
-
-    Coordinator->>Fusion: fuse_signals(SyntheticResult, SpeakerResult, ProsodyResult)
-```
-
-### 3.1 Deepfake Detection Engine (`DeepfakeDetector`)
-- **Primary Model**: Fine-tuned **AASIST (Audio Anti-Spoofing using Integrated Spectro-Temporal Graph Attention Networks)** combined with **Self-Supervised Wav2Vec 2.0 XLS-R** feature backbone.
-- **Model Output**: 2-dimensional Softmax logits:
-  $$P(\text{bonafide}), \quad P(\text{spoof})$$
-- **Spectral Artifact Extraction**:
-  - High-frequency phase discrepancies characteristic of HiFi-GAN, WaveGlow, and BigVGAN neural vocoders.
-  - Bispectral analysis for detecting non-linear quadratic phase coupling introduced by vocoder upsampling layers.
+### 4.1 Asynchronous Execution via ThreadPoolExecutor
+Running PyTorch and NumPy operations directly inside an `async def` coroutine blocks the asyncio event loop. The `InferenceCoordinator` uses `loop.run_in_executor` with a managed `concurrent.futures.ThreadPoolExecutor` to execute blocking ML workloads concurrently without event loop starvation:
 
 ```python
-# DeepfakeDetector Interface Definition
-from dataclasses import dataclass
-import torch
+# backend/app/ml/coordinator.py
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from typing import Dict, Any, Optional
+import numpy as np
 
-@dataclass(frozen=True)
-class DeepfakeAnalysisResult:
-    synthetic_probability: float  # Range: [0.0, 1.0]
-    bonafide_probability: float   # Range: [0.0, 1.0]
-    vocoder_artifact_score: float # Range: [0.0, 1.0]
-    model_version: str
-    inference_latency_ms: float
+class InferenceCoordinator:
+    def __init__(self, deepfake_detector, speaker_verifier, forensics_analyzer, asr_engine, intent_analyzer):
+        self.df = deepfake_detector
+        self.sv = speaker_verifier
+        self.af = forensics_analyzer
+        self.asr = asr_engine
+        self.nlp = intent_analyzer
+        self.executor = ThreadPoolExecutor(max_workers=4)
 
-class IDeepfakeDetector:
-    def predict(self, audio_tensor: torch.Tensor) -> DeepfakeAnalysisResult:
-        """
-        Input: Tensor of shape (1, 32000) representing 2.0s audio @ 16kHz
-        Output: DeepfakeAnalysisResult with calibrated probabilities
-        """
-        ...
+    async def coordinate_chunk_inference(self, ml_chunk: np.ndarray, forensic_chunk: np.ndarray, 
+                                         claimed_speaker_id: Optional[str]) -> Dict[str, Any]:
+        loop = asyncio.get_running_loop()
+
+        # Dispatch CPU/GPU blocking calls into thread pool
+        task_df = loop.run_in_executor(self.executor, self.df.predict, ml_chunk)
+        task_sv = loop.run_in_executor(self.executor, self.sv.verify, ml_chunk, claimed_speaker_id)
+        task_af = loop.run_in_executor(self.executor, self.af.analyze, forensic_chunk)
+        task_asr = loop.run_in_executor(self.executor, self.asr.transcribe, ml_chunk)
+
+        df_res, sv_res, af_res, asr_res = await asyncio.gather(task_df, task_sv, task_af, task_asr)
+
+        # NLP intent evaluation on the resulting transcript
+        intent_res = self.nlp.evaluate(asr_res.transcript)
+
+        return {
+            "deepfake": df_res,
+            "speaker": sv_res,
+            "forensics": af_res,
+            "asr": asr_res,
+            "intent": intent_res
+        }
 ```
 
-### 3.2 Speaker Verification Engine (`SpeakerVerifier`)
-- **Primary Model**: **ECAPA-TDNN** (Emphasized Channel Attention, Propagation, and Aggregation in TDNN) pretrained on VoxCeleb 1 & 2.
-- **Embedding Dimensionality**: $d = 192$ float32 values.
-- **Verification Metric**: Cosine similarity between incoming chunk embedding $\mathbf{e}_{\text{live}}$ and enrolled reference centroid $\mathbf{e}_{\text{ref}}$:
-  $$\text{CosineSimilarity}(\mathbf{e}_{\text{live}}, \mathbf{e}_{\text{ref}}) = \frac{\mathbf{e}_{\text{live}} \cdot \mathbf{e}_{\text{ref}}}{\|\mathbf{e}_{\text{live}}\|_2 \|\mathbf{e}_{\text{ref}}\|_2}$$
-- **Threshold Calibration**:
-  - Equal Error Rate (EER) threshold: $\theta_{\text{eer}} = 0.685$.
-  - Similarity Score remapped to $[0.0, 1.0]$:
-    $$S_{\text{speaker}} = \max\left(0.0, \min\left(1.0, \frac{\text{CosineSimilarity} + 1}{2}\right)\right)$$
+### 4.2 Deepfake Detection Engine (`DeepfakeDetector`)
+* **Model Baseline**: Pretrained **Wav2Vec 2.0 XLS-R** or **WavLM** with a mean-pooling transformer classification head, fine-tuned on binary bonafide vs spoof datasets.
+* **Output**: Synthetic voice probability $P_{\text{synth}} \in [0.0, 1.0]$.
+* **Validation Requirement**: Generalization must be validated across known neural vocoders, unseen zero-shot generators, lossy codecs (Opus, G.711), and acoustic replay conditions.
 
-### 3.3 Prosodic & Acoustic Anomaly Analyzer (`ProsodyAnalyzer`)
-Synthetic voices frequently exhibit unnatural pitch trajectories, lack of natural vocal tract micro-tremors, or uniform syllable durations:
-1. **F0 (Fundamental Frequency) Contour**: Extracted via probabilistic YIN (pYIN).
-2. **Jitter (Local)**: Cycle-to-cycle variation in pitch periods:
-   $$\text{Jitter} = \frac{\frac{1}{N-1}\sum_{i=1}^{N-1} |T_i - T_{i+1}|}{\frac{1}{N}\sum_{i=1}^N T_i}$$
-3. **Shimmer (Local)**: Cycle-to-cycle variation in speech peak amplitudes:
-   $$\text{Shimmer} = \frac{\frac{1}{N-1}\sum_{i=1}^{N-1} |A_i - A_{i+1}|}{\frac{1}{N}\sum_{i=1}^N A_i}$$
-4. **Prosodic Anomaly Score ($A_{\text{prosody}}$)**:
-   Synthesized speech often generates near-zero jitter ($\text{Jitter} < 0.005$) or robotic fixed pitch patterns ($F_0 \text{ variance} < 10 \text{ Hz}^2$). $A_{\text{prosody}} \in [0.0, 1.0]$ flags these structural deficiencies.
+### 4.3 Speaker Verification Engine (`SpeakerVerifier`)
+* **Model Baseline**: **ECAPA-TDNN** (SpeechBrain) generating 192-dimensional embeddings.
+* **Enrollment Profile**: Calculates normalized centroid $\mathbf{e}_{\text{centroid}}$ over $\ge 3$ reference samples.
+* **Metric**: **Normalized cosine similarity** in $[0.0, 1.0]$:
+  $$S_{\text{speaker}} = \max\left(0.0, \min\left(1.0, \frac{\text{CosineSim}(\mathbf{e}_{\text{live}}, \mathbf{e}_{\text{ref}}) + 1.0}{2.0}\right)\right)$$
+  *(Explicitly designated as normalized geometric similarity, not calibrated posterior probability).*
+
+### 4.4 Acoustic Forensics Engine (`ForensicAnalyzer`)
+Extracts explainable DSP metrics from the raw forensic chunk:
+* **Fundamental Frequency ($F_0$) Contour Dynamics:** Evaluated via pYIN.
+* **Jitter (Local):** Cycle-to-cycle frequency variation.
+* **Shimmer (Local):** Cycle-to-cycle amplitude variation.
+* **Harmonics-to-Noise Ratio (HNR):** Periodic vocal cord energy ratio.
+* *All detection thresholds are configurable heuristic baselines to be calibrated empirically.*
+
+### 4.5 Streaming ASR & Intent Analysis
+* **ASR**: `faster-whisper` INT8 running on the ML-normalized audio chunk.
+* **Intent Analyzer**: Regex trie parsing sliding transcript windows for urgency, authority claims, credential solicitation, and wire transfer payloads, outputting $S_{\text{conv}} \in [0.0, 1.0]$.
 
 ---
 
-## 4. Subsystem 3: Contextual Risk Scoring & Fusion Engine
+## 5. Subsystem 3: Context & Behavioral Intelligence Engine
 
-The Risk Fusion Engine produces an actionable, explainable impersonation risk score between $0$ and $100$.
+The `ContextEngine` evaluates operational and transactional metadata surrounding the call without requiring heavy LLM dependencies:
 
-### 4.1 Mathematical Formulation of Risk
-The composite risk score $R_t \in [0, 100]$ at time step $t$ is calculated via multi-factor sigmoid-weighted fusion:
+```python
+# backend/app/context/engine.py
+from dataclasses import dataclass
+from typing import Dict, Any, List
 
-$$R_{\text{raw}} = w_1 \cdot P_{\text{synth}} + w_2 \cdot (1.0 - S_{\text{speaker}}) + w_3 \cdot A_{\text{prosody}} + w_4 \cdot C_{\text{context}}$$
+@dataclass
+class ContextResult:
+    context_score: float         # Range: [0.0, 1.0]
+    risk_factors: List[str]
 
-Where the dynamic weights satisfy $\sum_{i=1}^4 w_i = 1.0$ under standard profile conditions:
-- $w_1 = 0.45$ (Synthetic Speech Detection Probability)
-- $w_2 = 0.30$ (Speaker Dissimilarity, active only when claimed identity enrolled)
-- $w_3 = 0.10$ (Acoustic / Prosodic Flaw Score)
-- $w_4 = 0.15$ (Transactional & Call Metadata Risk)
+class ContextEngine:
+    def evaluate(self, request_context: Dict[str, Any], session_context: Dict[str, Any]) -> ContextResult:
+        factors = []
+        score = 0.0
 
-*Note: If no claimed identity is provided ($w_2 = 0$), weights are re-normalized to $w_1 = 0.65, w_3 = 0.15, w_4 = 0.20$.*
+        amount = float(request_context.get("amount", 0.0))
+        if amount >= 1000000.0:  # >= ₹10 Lakh / $12,000
+            score += 0.35
+            factors.append(f"High-value financial request ({amount:,.2f})")
+        elif amount > 250000.0:
+            score += 0.15
+            factors.append(f"Elevated financial request ({amount:,.2f})")
 
-### 4.2 Temporal Smoothing (Exponential Moving Average)
-To prevent erratic alert flashing from single momentary noise spikes, the instantaneous raw risk score is filtered via an Exponential Moving Average (EMA) with asymmetric attack/decay:
+        if request_context.get("beneficiary_is_new", False):
+            score += 0.30
+            factors.append("Transfer requested to unfamiliar beneficiary account")
 
+        if session_context.get("is_off_hours", False):
+            score += 0.15
+            factors.append("Call initiated outside normal operational business hours")
+
+        if not session_context.get("caller_ani_matches_profile", True):
+            score += 0.20
+            factors.append("Caller ANI / CLI mismatch with registered contact directory")
+
+        return ContextResult(
+            context_score=min(1.0, score),
+            risk_factors=factors
+        )
+```
+
+---
+
+## 6. Subsystem 4: Dynamic Risk Intelligence & Multi-Signal Fusion
+
+### 6.1 Mathematical Formulation of Risk Fusion
+Under standard conditions with all 5 signals available:
+$$R_{\text{raw}} = 100 \cdot \left( w_{\text{df}} S_{\text{df}} + w_{\text{spk}} (1.0 - S_{\text{speaker}}) + w_{\text{conv}} S_{\text{conv}} + w_{\text{context}} S_{\text{context}} + w_{\text{forensic}} S_{\text{forensic}} \right) \cdot \Gamma$$
+
+**Standard Baseline Weights ($\sum w_i = 1.0$):**
+* $w_{\text{df}} = 0.35$ (Synthetic Voice Probability)
+* $w_{\text{spk}} = 0.25$ (Speaker Mismatch Score)
+* $w_{\text{conv}} = 0.15$ (Conversational Threat Score)
+* $w_{\text{context}} = 0.15$ (Transaction & Metadata Sensitivity)
+* $w_{\text{forensic}} = 0.10$ (Acoustic Forensic Anomaly Score)
+
+### 6.2 Handling Missing Signals (Dynamic Re-Normalization)
+If a signal is unavailable (e.g., claimed speaker is unenrolled, ASR stream fails, or audio is silent), TrueVoice does **not** insert an arbitrary pseudo-risk value (e.g. 0.30). Instead, the unavailable signal is omitted and remaining active weights $\mathcal{A}$ dynamically re-normalize:
+$$w'_j = \frac{w_j}{\sum_{k \in \mathcal{A}} w_k}$$
+* If claimed identity is unenrolled, Identity is flagged as `UNVERIFIED`; the session cannot transition to `TRUSTED` state regardless of how low $R_{\text{raw}}$ is.
+
+### 6.3 Non-Linear Compounding Multiplier ($\Gamma$)
+If synthetic probability is elevated ($S_{\text{df}} \ge 0.85$) **and** conversational intent indicates malicious activity ($S_{\text{conv}} \ge 0.70$):
+$$\Gamma = 1.35 \quad (\text{bounded such that } R_{\text{raw}} \le 100.0)$$
+
+### 6.4 Asymmetric Temporal Smoothing (EMA)
 $$R_t = \alpha \cdot R_{\text{raw}} + (1 - \alpha) \cdot R_{t-1}$$
-
 $$\alpha = \begin{cases} 
-0.60 & \text{if } R_{\text{raw}} > R_{t-1} \quad (\text{Fast Attack: alerts trigger rapidly}) \\ 
-0.20 & \text{if } R_{\text{raw}} \le R_{t-1} \quad (\text{Slow Decay: warnings linger safely}) 
+0.60 & \text{if } R_{\text{raw}} > R_{t-1} \quad (\text{Fast Attack: rapid alerting}) \\ 
+0.20 & \text{if } R_{\text{raw}} \le R_{t-1} \quad (\text{Slow Decay: warnings persist safely}) 
 \end{cases}$$
 
-### 4.3 Contextual Risk Matrix ($C_{\text{context}}$)
-Contextual risk aggregates transactional signals passed during call setup:
+---
 
-| Risk Signal | Value Condition | Risk Addition ($\Delta C$) |
-| :--- | :--- | :--- |
-| **Transaction Value** | $> \$25,000 \text{ / } ₹10,00,000$ | $+0.35$ |
-| **Account Change Request** | Beneficiary added within 24 hours | $+0.30$ |
-| **Caller Geo-Anomaly** | Origin IP / SIP Trunk mismatch with registered user | $+0.20$ |
-| **Off-Hours Activity** | Call made outside business operating hours | $+0.15$ |
-| **New Device / Caller ID** | Unrecognized ANI / CLI / WebRTC Device ID | $+0.15$ |
+## 7. Subsystem 5: Zero-Trust State Machine & Declarative Policy Engine
 
-Max capped at $C_{\text{context}} = 1.0$.
+### 7.1 Separation of Identity, Risk, and Trust Dimensions
+* **Identity Dimension:** `UNVERIFIED` vs `VERIFIED`
+* **Risk Dimension:** `LOW` (0-29), `MODERATE` (30-59), `HIGH` (60-79), `CRITICAL` (80-100)
+* **Trust State Dimension:** `OBSERVING`, `CAUTION`, `VERIFYING`, `TRUSTED`, `RESTRICTED`, `BLOCKED`, `HUMAN_REVIEW`
 
-### 4.4 Risk Level Categorization & Action Triggers
+### 7.2 Deterministic State Machine with Human Review Exits
 
-```mermaid
-graph LR
-    Score["Risk Score (0 - 100)"]
-    
-    Score -->|0 - 39| LOW["LOW RISK<br/>Allow Communication<br/>Silent Background Monitor"]
-    Score -->|40 - 69| MED["MEDIUM RISK<br/>Yellow Advisory Banner<br/>Suggest Second Factor"]
-    Score -->|70 - 84| HIGH["HIGH RISK<br/>Red Warning Banner<br/>Require Step-Up MFA / Callback"]
-    Score -->|85 - 100| CRIT["CRITICAL RISK<br/>Immediate Action Lockout<br/>Supervisor Escalation & Call Hold"]
+```python
+# backend/app/policy/state_machine.py
+from enum import Enum
+from typing import Tuple, Optional
+
+class TrustState(str, Enum):
+    OBSERVING = "OBSERVING"
+    CAUTION = "CAUTION"
+    VERIFYING = "VERIFYING"
+    TRUSTED = "TRUSTED"
+    RESTRICTED = "RESTRICTED"
+    BLOCKED = "BLOCKED"
+    HUMAN_REVIEW = "HUMAN_REVIEW"
+
+class TrustStateMachine:
+    def __init__(self, session_id: str):
+        self.session_id = session_id
+        self.current_state = TrustState.OBSERVING
+
+    def transition(self, risk_score: float, event: Optional[str] = None, 
+                   identity_verified: bool = False, signals_conflict: bool = False) -> Tuple[TrustState, str]:
+        
+        # 1. Conflicting signals escalate to human security review
+        if signals_conflict and self.current_state not in (TrustState.BLOCKED, TrustState.TRUSTED):
+            self.current_state = TrustState.HUMAN_REVIEW
+            return self.current_state, "ESCALATE_TO_SECURITY_ANALYST"
+
+        # 2. Deterministic Analyst Overrides for HUMAN_REVIEW
+        if self.current_state == TrustState.HUMAN_REVIEW:
+            if event == "ANALYST_APPROVE":
+                self.current_state = TrustState.TRUSTED
+                return self.current_state, "UNLOCK_PROTECTED_ACTION"
+            elif event == "ANALYST_RESTRICT":
+                self.current_state = TrustState.RESTRICTED
+                return self.current_state, "ENFORCE_READ_ONLY_LOCK"
+            elif event == "ANALYST_BLOCK":
+                self.current_state = TrustState.BLOCKED
+                return self.current_state, "FORCE_TERMINATE_AND_LOCK"
+            return self.current_state, "AWAITING_ANALYST_DECISION"
+
+        # 3. Standard State Lifecycle
+        if self.current_state == TrustState.OBSERVING:
+            if risk_score >= 80.0:
+                self.current_state = TrustState.BLOCKED
+                return self.current_state, "FORCE_TERMINATE_AND_LOCK"
+            elif risk_score >= 60.0 or event == "SENSITIVE_ACTION_REQUESTED":
+                self.current_state = TrustState.VERIFYING
+                return self.current_state, "DISPATCH_OUT_OF_BAND_CHALLENGE"
+            elif risk_score >= 30.0:
+                self.current_state = TrustState.CAUTION
+                return self.current_state, "DISPLAY_YELLOW_WARNING"
+
+        elif self.current_state == TrustState.CAUTION:
+            if risk_score >= 80.0:
+                self.current_state = TrustState.BLOCKED
+                return self.current_state, "FORCE_TERMINATE_AND_LOCK"
+            elif risk_score >= 60.0 or event == "SENSITIVE_ACTION_REQUESTED":
+                self.current_state = TrustState.VERIFYING
+                return self.current_state, "DISPATCH_OUT_OF_BAND_CHALLENGE"
+            elif risk_score < 25.0:
+                self.current_state = TrustState.OBSERVING
+                return self.current_state, "CLEAR_WARNING"
+
+        elif self.current_state == TrustState.VERIFYING:
+            if event == "OOB_VERIFIED" and identity_verified and risk_score < 40.0:
+                self.current_state = TrustState.TRUSTED
+                return self.current_state, "UNLOCK_PROTECTED_ACTION"
+            elif event == "OOB_TIMEOUT":
+                self.current_state = TrustState.RESTRICTED
+                return self.current_state, "ENFORCE_READ_ONLY_LOCK"
+            elif event == "OOB_REJECTED" or risk_score >= 80.0:
+                self.current_state = TrustState.BLOCKED
+                return self.current_state, "FORCE_TERMINATE_AND_LOCK"
+
+        elif self.current_state == TrustState.TRUSTED:
+            if risk_score >= 60.0:
+                self.current_state = TrustState.CAUTION
+                return self.current_state, "REVOKE_TRUST_AND_WARN"
+
+        elif self.current_state == TrustState.RESTRICTED:
+            if event == "REATTEMPT_VERIFY":
+                self.current_state = TrustState.VERIFYING
+                return self.current_state, "DISPATCH_OUT_OF_BAND_CHALLENGE"
+            elif risk_score >= 80.0:
+                self.current_state = TrustState.BLOCKED
+                return self.current_state, "FORCE_TERMINATE_AND_LOCK"
+
+        return self.current_state, "NONE"
+```
+
+### 7.3 Declarative Policy Evaluator
+```python
+# backend/app/policy/engine.py
+from dataclasses import dataclass
+from typing import Dict, Any
+
+@dataclass
+class PolicyRule:
+    rule_id: str
+    caution_threshold: float = 30.0
+    verify_threshold: float = 60.0
+    block_threshold: float = 80.0
+    lock_sensitive_actions: bool = True
+    policy_version: str = "1.0.0"
+
+class DeclarativePolicyEngine:
+    def __init__(self, rule: PolicyRule):
+        self.rule = rule
+
+    def evaluate(self, risk_score: float, request_context: Dict[str, Any]) -> str:
+        is_sensitive = float(request_context.get("amount", 0)) > 250000.0 or request_context.get("is_credential_request", False)
+        
+        if risk_score >= self.rule.block_threshold:
+            return "TERMINATE_CALL"
+        if risk_score >= self.rule.verify_threshold or (is_sensitive and risk_score >= self.rule.caution_threshold):
+            return "REQUIRE_SECONDARY_VERIFICATION"
+        if risk_score >= self.rule.caution_threshold:
+            return "WARN_OPERATOR"
+        return "ALLOW_AND_MONITOR"
 ```
 
 ---
 
-## 5. Subsystem 4: Backend Microservices & API Architecture
+## 8. Subsystem 6: Secondary Verification & Out-of-Band Workflows
 
-The TrueVoice backend is built on **FastAPI** leveraging async coroutines, Uvicorn worker clustering, and Redis for horizontal state broadcasting.
-
-### 5.1 Real-Time WebSocket Protocol Specification
-- **Endpoint**: `ws://api.truevoice.internal/v1/stream/{session_id}`
-- **Subprotocols**: `['audio.truevoice.v1']`
-- **Session Authentication**: JWT passed via query parameter `?token=<JWT>` or initial connection frame.
-
-#### 5.1.1 Audio Ingest Frame (Client $\to$ Server)
-Clients stream raw linear PCM samples as binary WebSocket messages:
-- Binary Payload: 16-bit Signed Little-Endian Integer array @ 16kHz.
-- Packet Frequency: Every $100 \text{ ms}$ ($1600 \text{ samples} = 3200 \text{ bytes}$).
-
-#### 5.1.2 Telemetry & Alert Broadcast Frame (Server $\to$ Client)
-Server pushes JSON telemetry events after every chunk analysis:
-
-```json
-{
-  "event_type": "TELEMETRY_UPDATE",
-  "session_id": "sess_9c8b72e1_f823",
-  "sequence_number": 42,
-  "timestamp": "2026-09-18T10:35:12.450Z",
-  "chunk_metrics": {
-    "duration_ms": 2000,
-    "speech_ratio": 0.94,
-    "rms_db": -18.4
-  },
-  "inference_results": {
-    "synthetic_probability": 0.892,
-    "speaker_similarity": 0.315,
-    "prosodic_anomaly_score": 0.760,
-    "vocoder_footprint_detected": true
-  },
-  "risk_assessment": {
-    "instantaneous_risk": 87.4,
-    "smoothed_risk": 84.1,
-    "risk_level": "HIGH",
-    "primary_factors": [
-      "High synthetic speech probability (89.2%)",
-      "Low speaker identity similarity (31.5%)",
-      "Acoustic phase artifacts matching neural vocoder"
-    ]
-  },
-  "recommended_action": "REQUIRE_SECONDARY_MFA"
-}
-```
-
-### 5.2 RESTful API Contracts
-
-#### `POST /v1/speakers/enroll`
-Registers a reference voiceprint for an identity (CEO, authorized signer).
-- **Request (Multipart Form-Data)**:
-  - `user_id`: UUID
-  - `name`: string
-  - `role`: string
-  - `audio_files`: Array of WAV/FLAC audio files (Minimum 3 files of $\ge 5\text{s}$ clean speech)
-- **Response `201 Created`**:
-```json
-{
-  "profile_id": "spk_01HZX8E9YV",
-  "user_id": "usr_9921448",
-  "enrolled_at": "2026-09-18T10:00:00Z",
-  "embedding_quality_score": 0.96,
-  "duration_enrolled_seconds": 18.5
-}
-```
-
-#### `POST /v1/sessions/create`
-Initializes a monitored voice call session.
-- **Request (`application/json`)**:
-```json
-{
-  "caller_identifier": "+919876543210",
-  "claimed_identity_id": "spk_01HZX8E9YV",
-  "context": {
-    "transaction_type": "HIGH_VALUE_WIRE",
-    "amount": 2500000.00,
-    "currency": "INR",
-    "recipient_account": "ACC-99887711",
-    "ip_address": "103.21.144.12"
-  }
-}
-```
-- **Response `201 Created`**:
-```json
-{
-  "session_id": "sess_9c8b72e1_f823",
-  "websocket_url": "wss://api.truevoice.internal/v1/stream/sess_9c8b72e1_f823",
-  "session_status": "INITIALIZED",
-  "created_at": "2026-09-18T10:34:00Z"
-}
-```
-
-#### `POST /v1/sessions/{session_id}/action`
-Dispatches a security override or enforcement action.
-- **Request (`application/json`)**:
-```json
-{
-  "action_type": "TRIGGER_MFA",
-  "reason": "Risk score exceeded threshold (84/100)",
-  "operator_id": "usr_sec_analyst_04"
-}
-```
-- **Response `200 OK`**:
-```json
-{
-  "action_id": "act_882191",
-  "status": "DISPATCHED",
-  "audit_event_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-}
-```
+* **Out-of-Band Authentication Ceremony:** In enterprise architecture, the claimed user's device executes a WebAuthn/FIDO2 ceremony where local biometric unlock authorizes a hardware-enclave signed assertion returned to the server. For the SIH MVP, an asynchronous challenge nonce with a 30-second TTL is dispatched to a simulated push endpoint (`/v1/verify/challenge`), returning an HMAC signature to `/v1/verify/response`.
+* **Dynamic Challenge-Response:** The operator prompts the caller with a randomized phonetic phrase displayed on the console (*"Repeat phrase: Crimson Falcon 19"*). This increases replay difficulty by requiring immediate dynamic speech generation.
 
 ---
 
-## 6. Subsystem 5: Database Schema & Vector Persistence Layer
-
-TrueVoice utilizes **PostgreSQL 16** with the **`pgvector`** extension for storing and querying 192-dimensional speaker embeddings.
-
-```mermaid
-erDiagram
-    USERS ||--o{ SPEAKER_PROFILES : owns
-    SPEAKER_PROFILES ||--o{ VOICEPRINT_EMBEDDINGS : has
-    CALL_SESSIONS ||--o{ RISK_ASSESSMENTS : records
-    CALL_SESSIONS ||--o{ SECURITY_ACTIONS : generates
-    CALL_SESSIONS ||--o{ AUDIT_LOGS : anchors
-    SPEAKER_PROFILES ||--o{ CALL_SESSIONS : claimed_in
-
-    USERS {
-        uuid id PK
-        varchar email
-        varchar full_name
-        varchar role
-        timestamptz created_at
-    }
-
-    SPEAKER_PROFILES {
-        uuid id PK
-        uuid user_id FK
-        varchar display_name
-        varchar designation
-        boolean is_active
-        timestamptz updated_at
-    }
-
-    VOICEPRINT_EMBEDDINGS {
-        uuid id PK
-        uuid speaker_profile_id FK
-        vector_192 embedding
-        float quality_score
-        timestamptz enrolled_at
-    }
-
-    CALL_SESSIONS {
-        uuid id PK
-        varchar session_token UK
-        uuid claimed_speaker_id FK
-        varchar caller_ani
-        jsonb context_metadata
-        varchar current_state
-        float peak_risk_score
-        timestamptz started_at
-        timestamptz ended_at
-    }
-
-    RISK_ASSESSMENTS {
-        uuid id PK
-        uuid session_id FK
-        int sequence_id
-        float synthetic_prob
-        float speaker_similarity
-        float prosody_score
-        float composite_risk
-        varchar risk_level
-        jsonb primary_factors
-        timestamptz recorded_at
-    }
-
-    SECURITY_ACTIONS {
-        uuid id PK
-        uuid session_id FK
-        varchar action_type
-        varchar triggered_by
-        varchar execution_status
-        timestamptz executed_at
-    }
-
-    AUDIT_LOGS {
-        uuid id PK
-        uuid session_id FK
-        varchar event_type
-        varchar prev_event_hash
-        varchar event_hash
-        jsonb payload
-        timestamptz logged_at
-    }
-```
-
-### 6.1 Complete DDL Specification
+## 9. Subsystem 7: Database Persistence & Vector Schema (PostgreSQL + pgvector)
 
 ```sql
--- Enable Extensions
+-- infra/postgres/init.sql
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "vector";
 
--- 1. Users Table
+-- 1. Organizations (Multi-Tenancy)
+CREATE TABLE organizations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(150) NOT NULL,
+    tenant_code VARCHAR(64) UNIQUE NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 2. Users Table
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     email VARCHAR(255) UNIQUE NOT NULL,
     full_name VARCHAR(150) NOT NULL,
-    role VARCHAR(50) NOT NULL CHECK (role IN ('ADMIN', 'SECURITY_ANALYST', 'OPERATOR', 'API_CONSUMER')),
+    role VARCHAR(50) NOT NULL CHECK (role IN ('OPERATOR', 'SECURITY_ANALYST', 'ORG_ADMIN', 'FORENSIC_AUDITOR')),
     password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 2. Speaker Profiles Table
+-- 3. Declarative Security Policies
+CREATE TABLE policies (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    policy_name VARCHAR(100) NOT NULL,
+    caution_threshold FLOAT NOT NULL DEFAULT 30.0,
+    verify_threshold FLOAT NOT NULL DEFAULT 60.0,
+    block_threshold FLOAT NOT NULL DEFAULT 80.0,
+    enforce_transaction_lock BOOLEAN NOT NULL DEFAULT TRUE,
+    oob_timeout_seconds INT NOT NULL DEFAULT 30,
+    version VARCHAR(32) NOT NULL DEFAULT '1.0.0',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 4. Speaker Profiles (Enrolled Biometric Identities)
 CREATE TABLE speaker_profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     display_name VARCHAR(150) NOT NULL,
     designation VARCHAR(100) NOT NULL,
+    consent_timestamp TIMESTAMPTZ NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 3. Voiceprint Embeddings (Vector Table)
+-- 5. Voiceprint Embeddings (Vector Storage)
 CREATE TABLE voiceprint_embeddings (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     speaker_profile_id UUID NOT NULL REFERENCES speaker_profiles(id) ON DELETE CASCADE,
@@ -608,340 +663,194 @@ CREATE TABLE voiceprint_embeddings (
     enrolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Cosine Distance HNSW Index for Fast Vector Retrieval
 CREATE INDEX idx_voiceprint_cosine ON voiceprint_embeddings 
-USING hnsw (embedding vector_cosine_ops) 
-WITH (m = 16, ef_construction = 64);
+USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
 
--- 4. Call Sessions Table
+-- 6. Model Versions
+CREATE TABLE model_versions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    model_name VARCHAR(100) NOT NULL,
+    version_tag VARCHAR(50) NOT NULL UNIQUE,
+    weights_digest VARCHAR(64) NOT NULL,
+    deployed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 7. Call Sessions
 CREATE TABLE call_sessions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     session_token VARCHAR(64) UNIQUE NOT NULL,
     claimed_speaker_id UUID REFERENCES speaker_profiles(id),
     caller_ani VARCHAR(32) NOT NULL,
     context_metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-    current_state VARCHAR(32) NOT NULL DEFAULT 'MONITORING'
-        CHECK (current_state IN ('INITIALIZED', 'MONITORING', 'FLAGGED_MEDIUM', 'SUSPICIOUS_HIGH', 'ACTION_LOCKED', 'TERMINATED')),
+    current_trust_state VARCHAR(32) NOT NULL DEFAULT 'OBSERVING'
+        CHECK (current_trust_state IN ('OBSERVING', 'CAUTION', 'VERIFYING', 'TRUSTED', 'RESTRICTED', 'BLOCKED', 'HUMAN_REVIEW', 'TERMINATED')),
     peak_risk_score FLOAT NOT NULL DEFAULT 0.0,
     started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     ended_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_call_sessions_state ON call_sessions(current_state);
-CREATE INDEX idx_call_sessions_token ON call_sessions(session_token);
-
--- 5. Risk Assessments Table (Chunk Telemetry)
+-- 8. Risk Assessments (Chunk Telemetry)
 CREATE TABLE risk_assessments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     session_id UUID NOT NULL REFERENCES call_sessions(id) ON DELETE CASCADE,
+    model_version_id UUID REFERENCES model_versions(id),
     sequence_id INT NOT NULL,
     synthetic_prob FLOAT NOT NULL,
     speaker_similarity FLOAT,
-    prosody_score FLOAT NOT NULL,
+    forensic_score FLOAT NOT NULL,
+    conversational_score FLOAT NOT NULL,
     composite_risk FLOAT NOT NULL,
-    risk_level VARCHAR(16) NOT NULL CHECK (risk_level IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')),
+    risk_tier VARCHAR(16) NOT NULL CHECK (risk_tier IN ('LOW', 'MODERATE', 'HIGH', 'CRITICAL')),
     primary_factors JSONB NOT NULL,
     recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_risk_assessments_sess ON risk_assessments(session_id, sequence_id);
+-- 9. Conversation Analyses
+CREATE TABLE conversation_analyses (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID NOT NULL REFERENCES call_sessions(id) ON DELETE CASCADE,
+    sequence_id INT NOT NULL,
+    transcript_redacted TEXT NOT NULL,
+    detected_intent_flags JSONB NOT NULL DEFAULT '[]'::jsonb,
+    recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
--- 6. Security Actions Table
+-- 10. Secondary Verification Events
+CREATE TABLE verification_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    session_id UUID NOT NULL REFERENCES call_sessions(id) ON DELETE CASCADE,
+    challenge_type VARCHAR(32) NOT NULL CHECK (challenge_type IN ('OOB_PUSH', 'IN_BAND_CHALLENGE', 'SECURE_CALLBACK')),
+    challenge_token VARCHAR(64) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'SUCCESS', 'TIMEOUT', 'REJECTED')),
+    dispatched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ
+);
+
+-- 11. Security Actions
 CREATE TABLE security_actions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     session_id UUID NOT NULL REFERENCES call_sessions(id) ON DELETE CASCADE,
-    action_type VARCHAR(64) NOT NULL CHECK (action_type IN ('ALERT_DISPLAYED', 'TRIGGER_MFA', 'SECURE_CALLBACK', 'SUPERVISOR_ESCALATE', 'TRANSACTION_HOLD')),
-    triggered_by VARCHAR(32) NOT NULL CHECK (triggered_by IN ('SYSTEM_AUTO', 'OPERATOR_MANUAL')),
-    execution_status VARCHAR(32) NOT NULL DEFAULT 'PENDING' CHECK (execution_status IN ('PENDING', 'SUCCESS', 'FAILED', 'BYPASSED')),
-    notes TEXT,
+    action_type VARCHAR(64) NOT NULL CHECK (action_type IN ('ALERT_DISPLAYED', 'TRIGGER_VERIFICATION', 'WORKFLOW_LOCKED', 'CALL_TERMINATED', 'HUMAN_ESCALATION')),
+    triggered_by VARCHAR(32) NOT NULL CHECK (triggered_by IN ('POLICY_AUTO', 'OPERATOR_MANUAL', 'ANALYST_OVERRIDE')),
+    triggering_reason TEXT NOT NULL,
+    policy_id UUID REFERENCES policies(id),
+    execution_status VARCHAR(32) NOT NULL DEFAULT 'PENDING' CHECK (execution_status IN ('PENDING', 'EXECUTED', 'FAILED')),
     executed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 7. Cryptographic Audit Ledger Table
+-- 12. Cryptographic Audit Ledger
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     session_id UUID NOT NULL REFERENCES call_sessions(id) ON DELETE CASCADE,
+    sequence_id INT NOT NULL,
     event_type VARCHAR(64) NOT NULL,
     prev_event_hash CHAR(64) NOT NULL,
     event_hash CHAR(64) NOT NULL UNIQUE,
+    trust_state VARCHAR(32) NOT NULL,
     payload JSONB NOT NULL,
     logged_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_audit_logs_chain ON audit_logs(session_id, logged_at);
+CREATE INDEX idx_audit_chain ON audit_logs(session_id, sequence_id);
 ```
 
 ---
 
-## 7. Subsystem 6: Security Decisioning, Policy & Alert Workflows
+## 10. Subsystem 8: API & Streaming Protocol Specifications (REST & WebSockets)
 
-### 7.1 Security State Machine
-Each active call session transitions through deterministic security states based on continuous risk evaluations and human intervention:
+### 10.1 REST API Contracts
+* `POST /v1/sessions/create`: Initializes session with context metadata; returns session token and WebSocket URL.
+* `POST /v1/verify/challenge`: Triggers secondary verification challenge.
+* `POST /v1/verify/response`: Validates challenge assertion; returns updated trust state.
+* `POST /v1/sessions/{session_id}/action`: Dispatches manual analyst actions (`ANALYST_APPROVE`, `ANALYST_RESTRICT`, `ANALYST_BLOCK`).
+* `GET  /v1/audit/events`: Retrieves audit chain blocks with hash integrity verification.
 
-```mermaid
-stateDiagram-v2
-    [*] --> INITIALIZED
-    INITIALIZED --> MONITORING : Audio Streaming Begun
-    
-    MONITORING --> FLAGGED_MEDIUM : Risk Score >= 40
-    FLAGGED_MEDIUM --> MONITORING : Risk Score < 35 (EMA Decay)
-    
-    FLAGGED_MEDIUM --> SUSPICIOUS_HIGH : Risk Score >= 70
-    MONITORING --> SUSPICIOUS_HIGH : Rapid Spike >= 70
-    
-    SUSPICIOUS_HIGH --> ACTION_LOCKED : Risk Score >= 85 OR High-Value Action Attempt
-    
-    SUSPICIOUS_HIGH --> MONITORING : Secondary MFA Verified
-    ACTION_LOCKED --> MONITORING : Supervisor Authenticated & Approved
-    
-    MONITORING --> TERMINATED : Call Completed
-    SUSPICIOUS_HIGH --> TERMINATED : Call Terminated
-    ACTION_LOCKED --> TERMINATED : Call Terminated by Security
-    TERMINATED --> [*]
-```
-
-### 7.2 Automated Security Response Matrix
-
-| Risk State | Range | Automatic Platform Action | User/Operator Experience |
-| :--- | :--- | :--- | :--- |
-| **LOW** | $0 \le R < 40$ | Allow packet flow; silent telemetry logging. | Unobtrusive green shield in operator view. |
-| **MEDIUM** | $40 \le R < 70$ | Issue warning toast; log suspicious features. | Yellow advisory banner; suggestion to request verifying questions. |
-| **HIGH** | $70 \le R < 85$ | Dispatch automated Out-of-Band Push Notification / SMS OTP to registered mobile of claimed speaker. | Red flashing alert modal; transaction button locked with "MFA In Flight". |
-| **CRITICAL**| $85 \le R \le 100$ | Freeze financial transaction execution engine; initiate secure supervisor bridge call; trigger automated callback. | Red modal lock: "CRITICAL IMPERSONATION DETECTED". Audio recorded for evidentiary escrow. |
-
----
-
-## 8. Subsystem 7: Tamper-Evident Cryptographic Audit Ledger
-
-To prevent internal fraud, evidentiary tampering, or model repudiation, all critical security events form a cryptographically verified hash chain.
-
-### 8.1 SHA-256 Hash Chain Structure
-
-For each event $k \ge 1$ within session $S$:
-
-$$\text{Hash}_k = \text{SHA-256}\Big(\text{Hash}_{k-1} \;\|\; \text{SessionID} \;\|\; \text{Timestamp} \;\|\; \text{EventType} \;\|\; \text{CanonicalJSON}(\text{Payload})\Big)$$
-
-Where $\text{Hash}_0 = \text{SHA-256}(\text{SessionID} \;\|\; \text{GenesisNonce})$.
-
-```mermaid
-classDiagram
-    class AuditBlock {
-        +int sequence_number
-        +str session_id
-        +str previous_hash
-        +str current_hash
-        +str event_type
-        +dict payload
-        +str iso_timestamp
-        +compute_hash() str
-        +verify_integrity(str prev_hash) bool
-    }
-```
-
-### 8.2 Blockchain Event Notary Interface (Optional Integrity Layer)
-At the conclusion of each high-risk session, a summary record hash is anchored to a smart contract to guarantee third-party auditability without placing raw audio or PII on-chain.
-
-#### Smart Contract Interface (`IVoiceAuditLedger.sol`)
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-
-interface IVoiceAuditLedger {
-    event SecurityAuditAnchored(
-        bytes32 indexed sessionHash,
-        bytes32 indexed rootMerkleHash,
-        uint8 peakRiskScore,
-        uint256 timestamp
-    );
-
-    function anchorSessionAudit(
-        bytes32 sessionHash,
-        bytes32 rootMerkleHash,
-        uint8 peakRiskScore,
-        string calldata metadataUri
-    ) external;
-
-    function verifyAuditAnchor(
-        bytes32 sessionHash,
-        bytes32 rootMerkleHash
-    ) external view returns (bool exists, uint256 blockTimestamp);
-}
-```
-
----
-
-## 9. Subsystem 8: Frontend Client & Real-Time Monitoring Dashboard
-
-The frontend is implemented in **Next.js 14** using the App Router, React Server Components (RSC) for dashboard metrics, and client-side hooks for real-time WebSocket and WebAudio stream visualization.
-
-### 9.1 Component Hierarchy
-
-```mermaid
-graph TD
-    AppLayout["App Layout (Navbar, Session Context, User RBAC)"]
-    AppLayout --> LiveCallView["LiveCallView (/dashboard/live/[session_id])"]
-    
-    LiveCallView --> AudioVisualizer["AudioSpectrumVisualizer (Canvas / WebGL)"]
-    LiveCallView --> RiskGauge["DynamicRiskGauge (Radial SVG Gauge 0-100)"]
-    LiveCallView --> BreakdownCard["FactorBreakdownRadar (Synthetic vs Speaker vs Prosody)"]
-    LiveCallView --> SecurityActions["ActionPanel (Trigger MFA, Callback, Hold)"]
-    LiveCallView --> EventTimeline["IncidentTimeline (Historical chunk assessments)"]
-```
-
-### 9.2 Client-Side Audio Pipeline (`AudioWorklet`)
-To bypass main-thread DOM lag and audio stutter, audio sampling occurs inside a dedicated Web Audio API `AudioWorkletProcessor`:
-
-```javascript
-// truevoice-worklet-processor.js
-class TrueVoiceProcessor extends AudioWorkletProcessor {
-  constructor() {
-    super();
-    this.bufferSize = 2048;
-    this.buffer = new Float32Array(this.bufferSize);
-    this.bytesWritten = 0;
+### 10.2 Real-Time WebSocket Protocol (`/v1/stream/{session_id}`)
+* **Client $\to$ Server (Binary Audio Chunk)**: Raw PCM16 frames captured at client rate.
+* **Server $\to$ Client (JSON Telemetry Broadcast)**:
+  ```json
+  {
+    "type": "TELEMETRY_UPDATE",
+    "session_id": "sess_9c8b72e1_f823",
+    "sequence_number": 18,
+    "timestamp": "2026-09-18T10:49:12.500Z",
+    "risk_score": 74.5,
+    "risk_tier": "HIGH",
+    "trust_state": "VERIFYING",
+    "factors": {
+      "synthetic_probability": 0.82,
+      "speaker_similarity": 0.31,
+      "forensic_anomaly": 0.65,
+      "conversational_threat": 0.78,
+      "contextual_risk": 0.85
+    },
+    "action_enforced": "DISPATCH_OUT_OF_BAND_CHALLENGE",
+    "active_warnings": ["High synthetic probability detected", "Wire transfer request to new beneficiary"]
   }
+  ```
 
-  process(inputs, outputs, parameters) {
-    const input = inputs[0];
-    if (!input || !input[0]) return true;
-    const channelData = input[0];
+---
 
-    for (let i = 0; i < channelData.length; i++) {
-      this.buffer[this.bytesWritten++] = channelData[i];
-      if (this.bytesWritten >= this.bufferSize) {
-        // Convert Float32 [-1.0, 1.0] to 16-bit signed PCM LE
-        const pcm16 = new Int16Array(this.bufferSize);
-        for (let j = 0; j < this.bufferSize; j++) {
-          const s = Math.max(-1, Math.min(1, this.buffer[j]));
-          pcm16[j] = s < 0 ? s * 0x8000 : s * 0x7fff;
-        }
-        this.port.postMessage(pcm16.buffer, [pcm16.buffer]);
-        this.bytesWritten = 0;
-      }
-    }
-    return true;
-  }
-}
-registerProcessor('truevoice-worklet-processor', TrueVoiceProcessor);
-```
+## 11. Subsystem 9: Cryptographic Audit Ledger & Tamper Evidence
 
-### 9.3 Client State Management (`useSessionRisk` Hook)
-Uses `zustand` for high-throughput, low-render-overhead updates from the telemetry WebSocket:
+Every security event calculates a deterministic SHA-256 block hash:
+$$\text{Hash}_i = \text{SHA-256}\left(\text{Hash}_{i-1} \parallel \text{SessionID} \parallel \text{SeqID} \parallel \text{TrustState} \parallel \text{EventType} \parallel \text{Timestamp} \parallel \text{CanonicalJSON}(\text{Payload}) \parallel \text{ModelVersion}\right)$$
 
-```typescript
-// types/session.ts
-export interface TelemetryPayload {
-  session_id: string;
-  sequence_number: number;
-  synthetic_probability: number;
-  speaker_similarity: number;
-  prosody_score: number;
-  composite_risk: number;
-  risk_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  primary_factors: string[];
-}
+* A database administrator can theoretically modify rows; however, modifying any historic row invalidates all subsequent hashes, providing immediate mathematical proof of tampering.
+* The system operates 100% autonomously on PostgreSQL; external blockchain anchoring is strictly an optional post-session notary feature.
 
-// store/useSessionStore.ts
-import { create } from 'zustand';
+---
 
-interface SessionState {
-  currentRisk: number;
-  riskLevel: string;
-  factorHistory: TelemetryPayload[];
-  isLocked: boolean;
-  updateTelemetry: (payload: TelemetryPayload) => void;
-  reset: () => void;
-}
+## 12. Subsystem 10: Frontend Operations Console & AudioWorklet Client
 
-export const useSessionStore = create<SessionState>((set) => ({
-  currentRisk: 0,
-  riskLevel: 'LOW',
-  factorHistory: [],
-  isLocked: false,
-  updateTelemetry: (payload) =>
-    set((state) => ({
-      currentRisk: payload.composite_risk,
-      riskLevel: payload.risk_level,
-      factorHistory: [...state.factorHistory.slice(-50), payload],
-      isLocked: payload.risk_level === 'CRITICAL',
-    })),
-  reset: () => set({ currentRisk: 0, riskLevel: 'LOW', factorHistory: [], isLocked: false }),
-}));
+The Next.js 14 console captures microphone input using an AudioWorklet script that reads `currentFrame` and transfers buffers to the main thread for WebSocket transmission. The UI maintains a real-time risk gauge, Trust State badge, factor radar chart, and simulated wire-transfer approval button that disables automatically upon entering `VERIFYING`, `RESTRICTED`, or `BLOCKED` states.
+
+---
+
+## 13. Subsystem 11: Failure Handling, Signal Conflicts & Fail-Safe Mitigations
+
+```text
+┌──────────────────────────────┬──────────────────────────┬───────────────────────────────────────────────────────┐
+│ Subsystem Failure Mode       │ Operational Impact       │ Deterministic Fail-Safe Mitigation                    │
+├──────────────────────────────┼──────────────────────────┼───────────────────────────────────────────────────────┤
+│ GPU Worker Offline           │ Deepfake inference fails │ Fall back to CPU execution; retain previous score;    │
+│                              │                          │ log degraded inference warning to console             │
+│ ASR Engine Crash             │ Transcripts unavailable  │ Mark S_conv as UNAVAILABLE; re-normalize active       │
+│                              │                          │ weights; do not assume safe                           │
+│ Speaker Profile Unenrolled   │ Biometrics unavailable   │ Set Identity = UNVERIFIED; re-normalize weights;      │
+│                              │                          │ strictly block transition to TRUSTED state            │
+│ Signal Conflict:             │ Ambiguous threat profile │ Transition session to HUMAN_REVIEW state; lock target │
+│ High DF Prob + High Spk Match│                          │ workflow actions; await analyst review                │
+│ Redis Cache Unreachable      │ Ephemeral pub/sub down   │ Fall back to in-memory local cache & direct DB write; │
+│                              │                          │ dispatch infrastructure health alarm                  │
+│ Sustained Silence / Noise    │ VAD SpeechRatio < 0.50   │ Discard chunk; decay smoothed risk score via slow EMA │
+└──────────────────────────────┴──────────────────────────┴───────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 10. Data Privacy, Biometric Protection & Threat Modeling
+## 14. Subsystem 12: Engineering Latency Budgets & Validation Checklist
 
-### 10.1 Zero Raw Audio Storage Policy
-1. **Volatile In-Memory Processing**: Audio is buffered strictly in transient RAM ring buffers. As sliding windows complete, raw audio buffers are immediately overwritten (`np.zeros`) and garbage-collected.
-2. **Feature-Only Persistence**: Only mathematical features (192-dimensional floating-point embeddings, spectrogram metrics, risk scores) are stored. Inversion of 192-d embeddings back to audible speech without a matching vocoder and decoder is computationally infeasible.
-3. **Regulatory Compliance**: Adheres to the **Digital Personal Data Protection (DPDP) Act 2023** (India) and **GDPR Article 9** (Special Category Biometric Data).
+### 14.1 Latency Taxonomy & Preliminary Design Budget
+* **Audio Accumulation Latency:** $2.0\text{ seconds}$ (fixed window buffer size).
+* **Detection Update Interval:** $0.5\text{ seconds}$ (hop size, yielding 2 updates/sec).
+* **Compute Latency Budget:** $\le 370\text{ ms}$ (budgeted threshold: $<450\text{ ms}$):
+  - Ingestion & Resampling: $15\text{ ms}$
+  - Silero VAD (ONNX): $10\text{ ms}$
+  - Deepfake Inference: $120\text{ ms}$
+  - Speaker Verification: $45\text{ ms}$
+  - Signal Forensics: $25\text{ ms}$
+  - Streaming ASR: $110\text{ ms}$
+  - NLP Intent & Context: $20\text{ ms}$
+  - Risk Fusion & State Machine: $10\text{ ms}$
+  - WebSocket Broadcast: $15\text{ ms}$
 
-### 10.2 Cryptographic Protection of Biometric Embeddings
-- Voiceprint embeddings are encrypted at rest in PostgreSQL using AES-256-GCM column encryption via cryptographic extensions or KMS-managed keys.
-- All network transit uses TLS 1.3 with mandatory Perfect Forward Secrecy (PFS).
-
-### 10.3 STRIDE Threat Analysis & Mitigations
-
-| STRIDE Category | Threat Description | Attack Vector | Mitigation Strategy |
-| :--- | :--- | :--- | :--- |
-| **Spoofing** | Adversary injects pre-recorded bonafide audio of victim | Replay Attack | Acoustic room-response anomaly detection and micro-reverberation variance checks. |
-| **Tampering** | Man-in-the-middle alters WebSocket telemetry or audio | Network Interception | Mutual TLS (mTLS) with pinned server certificates and HMAC packet signing. |
-| **Repudiation** | Fraudster claims the bank system fabricated the deepfake detection | Legal / Dispute | Cryptographic SHA-256 event audit chains anchored to immutable audit records. |
-| **Information Disclosure** | Leakage of enrolled executive voiceprints | Database Dump | Voiceprints stored as anonymized vector embeddings; no raw audio files retained. |
-| **Denial of Service** | Flooding WebSocket endpoint with millions of bogus PCM streams | Stream Flooding | IP rate-limiting, connection quotas per tenant token, Redis token-bucket leaky algorithm. |
-| **Elevation of Privilege** | Rogue operator bypasses risk warnings without supervisor authorization | Insider Threat | Dual-authorization requirement (Four-Eyes Principle) for overriding CRITICAL alerts. |
-
----
-
-## 11. Deployment, Infrastructure & Concurrency Sizing
-
-### 11.1 Container & Service Topology
-
-```mermaid
-graph TD
-    subgraph Edge ["Public / Enterprise Ingress"]
-        LB["NGINX / Envoy API Gateway (TLS Termination)"]
-    end
-
-    subgraph ServiceMesh ["Internal Kubernetes Cluster (Namespace: truevoice)"]
-        FastAPI_1["FastAPI Core Service Pod 1"]
-        FastAPI_2["FastAPI Core Service Pod 2"]
-        
-        TorchWorker_1["ML Worker (GPU: NVIDIA T4/A10G)"]
-        TorchWorker_2["ML Worker (GPU: NVIDIA T4/A10G)"]
-        
-        RedisCluster[("Redis Cluster (Pub/Sub + Cache)")]
-        Postgres[(PostgreSQL 16 + pgvector Master-Replica)]
-    end
-
-    LB --> FastAPI_1
-    LB --> FastAPI_2
-    FastAPI_1 <--> RedisCluster
-    FastAPI_2 <--> RedisCluster
-    FastAPI_1 --> TorchWorker_1
-    FastAPI_2 --> TorchWorker_2
-    TorchWorker_1 --> Postgres
-    TorchWorker_2 --> Postgres
-```
-
-### 11.2 Concurrency & Latency Sizing (Single Node Baseline)
-
-| Subsystem Component | Compute Target | Memory Target | P95 Latency SLA | Target Concurrency |
-| :--- | :--- | :--- | :--- | :--- |
-| **Audio Ingestion / VAD** | 0.2 vCPU / stream | 15 MB RAM / stream | $< 15 \text{ ms}$ | 500 concurrent streams |
-| **Deepfake Inference (AASIST/Wav2Vec2)**| GPU (CUDA Tensor Core) | 1.8 GB VRAM total | $< 120 \text{ ms}$ | 64 parallel chunks / GPU |
-| **Speaker Verification (ECAPA-TDNN)** | GPU (CUDA Tensor Core) | 900 MB VRAM total | $< 65 \text{ ms}$ | 128 parallel chunks / GPU |
-| **Risk Scoring & Fusion** | 0.05 vCPU / stream | 2 MB RAM / stream | $< 5 \text{ ms}$ | 1,000 streams / node |
-| **End-to-End Budget (Ingest $\to$ Alert)**| Hybrid | — | **$< 280 \text{ ms}$** | Exceeds real-time threshold |
-
----
-
-## 12. Verification & Acceptance Criteria Checklist
-
-- [x] **Sub-300ms Processing Latency**: Full chunk ingest-to-dashboard latency verified under 300ms.
-- [x] **Zero Raw Audio Retention**: Memory leak tests verify no PCM audio remains after session termination.
-- [x] **Multi-Signal Fusion**: Validated against synthetic benchmarks (ElevenLabs, Coqui-TTS, Voice-Conversion-Toolkit).
-- [x] **Vector Database Indexing**: `pgvector` HNSW indexes verified under 10ms for 100,000 candidate profiles.
-- [x] **Audit Chain Integrity**: Tamper verification script confirms hash chain invalidation if any database row is altered.
+### 14.2 Open Acceptance Criteria Checklist
+- [ ] **Latency Budget Validation**: Empirically profile chunk ingest-to-broadcast latency on target hardware under active stream load.
+- [ ] **Zero Raw Audio Retention**: Validate memory buffers are purged immediately post-feature extraction.
+- [ ] **Biometric Vector Encryption**: Verify enrolled 192-d vectors are encrypted at rest via AES-256-GCM.
+- [ ] **Zero-Trust State Validation**: Unit tests verify that low risk alone never transitions an unverified session to `TRUSTED`.
+- [ ] **Dynamic Weight Re-Normalization**: Verify weight math when speaker profile or ASR stream is absent.
+- [ ] **Human Review State Transitions**: Test analyst exit actions (`ANALYST_APPROVE`, `ANALYST_RESTRICT`, `ANALYST_BLOCK`).
+- [ ] **Audit Hash Chain Verifiability**: Automated verification script confirms that modifying any database row breaks the subsequent SHA-256 chain.
