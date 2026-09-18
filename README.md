@@ -234,6 +234,29 @@ TrueVoice
 * Audit logging
 * Optional blockchain-based audit records
 
+### Deepfake Audio Detector
+
+TrueVoice includes a Wav2Vec2 classifier fine-tuned to distinguish human speech
+from AI-generated speech. It accepts WAV, MP3, FLAC, and other formats supported
+by librosa, resampling input to mono 16 kHz before inference.
+
+Install the ML dependencies:
+
+```bash
+pip install -e .
+```
+
+Classify a file from the command line:
+
+```bash
+python scripts/detect_audio.py path/to/audio.wav
+```
+
+The model's class 0 is real/bonafide speech and class 1 is synthetic speech.
+Its strongest performance is expected on 2.5-13 second clips. The checkpoint
+was trained on six TTS platforms, so results on unseen generators, noisy audio,
+voice conversion, or real-time manipulation require separate validation.
+
 ---
 
 ## 📱 Communication Support
