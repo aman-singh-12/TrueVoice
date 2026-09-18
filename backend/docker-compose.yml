@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  truevoice-db:
+    image: pgvector/pgvector:pg16
+    container_name: truevoice-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: truevoice
+      POSTGRES_PASSWORD: truevoice
+      POSTGRES_DB: truevoice_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U truevoice -d truevoice_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  truevoice-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: truevoice-api
+    restart: unless-stopped
+    depends_on:
+      truevoice-db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://truevoice:truevoice@truevoice-db:5432/truevoice_db
+      - TRUEVOICE_ML_MODE=mock
+      - SECRET_KEY=truevoice-dev-insecure-secret-key-change-in-production-2026
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
+
+volumes:
+  postgres_data:
