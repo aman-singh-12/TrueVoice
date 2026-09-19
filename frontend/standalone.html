@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrueVoice — AI Voice Cloning Detection & Impersonation Defense</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- React & Babel for zero-build execution -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            warm: {
+              canvas: '#FBFBFA',
+              subtle: '#F4F4F0',
+              card: '#FFFFFF',
+              border: '#EAEAE5',
+              well: '#F7F7F4',
+              mutedBar: '#D4D4D0',
+            },
+            ink: {
+              primary: '#18181B',
+              secondary: '#71717A',
+              muted: '#52525B',
+              subtle: '#A1A1AA',
+            },
+            terracotta: {
+              50: '#FFF7ED',
+              100: '#FFEDD5',
+              200: '#FED7AA',
+              500: '#F97316',
+              600: '#EA580C',
+              700: '#C2410C',
+              800: '#9A3412',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          boxShadow: {
+            'soft-sm': '0 1px 2px 0 rgba(24, 24, 27, 0.04)',
+            'soft': '0 1px 3px 0 rgba(24, 24, 27, 0.04), 0 1px 2px -1px rgba(24, 24, 27, 0.02)',
+            'soft-md': '0 4px 12px -2px rgba(24, 24, 27, 0.06), 0 2px 6px -1px rgba(24, 24, 27, 0.03)',
+            'soft-lg': '0 10px 25px -3px rgba(24, 24, 27, 0.08), 0 4px 10px -2px rgba(24, 24, 27, 0.04)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #F4F4F0; border-radius: 9999px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #D4D4D0; border-radius: 9999px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #A1A1AA; }
+    .bg-warm-radial { background: radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.03) 0%, transparent 70%); }
+  </style>
+</head>
+<body class="bg-[#FBFBFA] text-[#18181B] antialiased selection:bg-orange-200 selection:text-orange-950 min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- MOCK SCENARIOS & DATA ---
+    const personas = [
+      { id: 'p1', name: 'Elena Rostova', role: 'Lead Forensic Investigator', badge: 'SOC-FORENSIC-L3', avatar: 'ER' },
+      { id: 'p2', name: 'Marcus Vance', role: 'Chief Information Security Officer', badge: 'CISO-EXEC-01', avatar: 'MV' },
+      { id: 'p3', name: 'Devon Miller', role: 'Tier 1 SOC Analyst', badge: 'SOC-ANALYST-T1', avatar: 'DM' }
+    ];
+
+    const scenarioAttack = {
+      id: 'attack',
+      title: '🔴 Critical Impersonation: Deepfake Escrow Attack',
+      type: 'attack',
+      filename: 'call_rec_2026_09_18_urgent_escrow_wire_cf0.wav',
+      fileSize: '4.2 MB',
+      audioDuration: 32.0,
+      sampleRate: '16.0 kHz (PCM-16)',
+      codec: 'Telephony G.711u / High-Res Re-encode',
+      channelMode: 'Dual Channel (Inbound / Agent)',
+      overallRiskScore: 88.4,
+      riskTier: 'CRITICAL',
+      compoundingMultiplier: 1.45,
+      threatVerdict: 'SYNTHETIC CLONE + HIGH-VALUE WIRE INTERCEPT BLOCKED',
+      forensicSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      biometric: {
+        enrolledId: 'BIO-EXEC-004',
+        fullName: 'Sarah Jenkins',
+        title: 'Chief Financial Officer',
+        department: 'Global Treasury & Finance',
+        avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
+        ecapaEmbeddingHash: '0x8f4d92a17e0c4b22...192d_centroid',
+        centroidSamples: 42,
+        enrolledDate: '2025-11-14',
+        similarityScore: 0.38,
+        matchThreshold: 0.78,
+        status: 'IMPERSONATION_MISMATCH'
+      },
+      factors: [
+        { id: 'f1', name: 'Acoustic Synthetic Artifacts', weight: 0.35, rawScore: 94.0, anomalyDetected: true },
+        { id: 'f2', name: 'ECAPA-TDNN Biometric Mismatch', weight: 0.30, rawScore: 92.0, anomalyDetected: true },
+        { id: 'f3', name: 'Social Engineering & Urgent Wording', weight: 0.20, rawScore: 85.0, anomalyDetected: true },
+        { id: 'f4', name: 'Telephony Route & CDR Anomalies', weight: 0.10, rawScore: 78.0, anomalyDetected: true },
+        { id: 'f5', name: 'Temporal Stress & Cadence Flux', weight: 0.05, rawScore: 62.0, anomalyDetected: true }
+      ],
+      segments: [
+        { id: 'seg-1', startTime: 0.0, endTime: 3.8, syntheticScore: 0.12 },
+        { id: 'seg-2', startTime: 3.8, endTime: 12.4, syntheticScore: 0.96 },
+        { id: 'seg-3', startTime: 12.4, endTime: 18.2, syntheticScore: 0.24 },
+        { id: 'seg-4', startTime: 18.2, endTime: 29.8, syntheticScore: 0.94 },
+        { id: 'seg-5', startTime: 29.8, endTime: 32.0, syntheticScore: 0.31 }
+      ],
+      transcript: [
+        { id: 't1', timeOffset: 0.8, speaker: 'Receiver (Analyst)', text: 'Good afternoon, Treasury Desk. Analyst Miller speaking, how can I direct your call?' },
+        { id: 't2', timeOffset: 4.2, speaker: 'Caller (Target)', text: 'Devon, this is Sarah Jenkins. I am calling from Frankfurt and we are facing a strict closing deadline.', threat: 'URGENCY' },
+        { id: 't3', timeOffset: 8.5, speaker: 'Caller (Target)', text: 'I need you to bypass normal dual-signoff and release $2,450,000 to Apex Capital escrow right now.', threat: 'FINANCIAL_WIRE' },
+        { id: 't4', timeOffset: 14.1, speaker: 'Receiver (Analyst)', text: 'Understood, Ms. Jenkins. However, policy requires an out-of-band hardware token verification for amounts over $500k.' },
+        { id: 't5', timeOffset: 19.5, speaker: 'Caller (Target)', text: 'Do not delay this! If this wire is not completed in 10 minutes, the merger defaults. Keep this confidential and execute immediately!', threat: 'SECRECY' },
+        { id: 't6', timeOffset: 26.3, speaker: 'Caller (Target)', text: 'I will personally sign off on the audit log as soon as I land back in New York.', threat: 'AUTHORITY' }
+      ],
+      lockedActions: [
+        { id: 'ACT-1', name: 'SWIFT International Wire $2,450,000.00 USD', target: 'Apex Capital Escrow (CH93-0000-4910-A)', status: 'LOCKED' },
+        { id: 'ACT-2', name: 'Dual-Signoff Treasury Policy Override', target: 'Treasury Core Vault Rule #SEC-819', status: 'LOCKED' }
+      ]
+    };
+
+    const scenarioAuthentic = {
+      id: 'authentic',
+      title: '🟢 Authentic Executive: Routine Infra Review',
+      type: 'authentic',
+      filename: 'call_rec_2026_09_18_routine_quarterly_ops_mv.wav',
+      fileSize: '3.8 MB',
+      audioDuration: 28.5,
+      sampleRate: '16.0 kHz (PCM-16)',
+      codec: 'WebRTC Opus 48kHz downsampled',
+      channelMode: 'Dual Channel (Inbound / Agent)',
+      overallRiskScore: 11.6,
+      riskTier: 'LOW',
+      compoundingMultiplier: 1.0,
+      threatVerdict: 'AUTHENTIC EXECUTIVE VOICE • HARMONIC PURITY 98.9%',
+      forensicSha256: '4a3b8d910f2c4189acbe110294e82f1288c3a9d9418290f1190bc129841bb022',
+      biometric: {
+        enrolledId: 'BIO-EXEC-001',
+        fullName: 'Marcus Vance',
+        title: 'Chief Information Security Officer',
+        department: 'Global Security & Resiliency',
+        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+        ecapaEmbeddingHash: '0x3c81e991da01824f...192d_centroid',
+        centroidSamples: 58,
+        enrolledDate: '2025-08-01',
+        similarityScore: 0.94,
+        matchThreshold: 0.78,
+        status: 'VERIFIED_MATCH'
+      },
+      factors: [
+        { id: 'f1', name: 'Acoustic Synthetic Artifacts', weight: 0.35, rawScore: 8.0, anomalyDetected: false },
+        { id: 'f2', name: 'ECAPA-TDNN Biometric Mismatch', weight: 0.30, rawScore: 6.0, anomalyDetected: false },
+        { id: 'f3', name: 'Social Engineering & Urgent Wording', weight: 0.20, rawScore: 12.0, anomalyDetected: false },
+        { id: 'f4', name: 'Telephony Route & CDR Anomalies', weight: 0.10, rawScore: 15.0, anomalyDetected: false },
+        { id: 'f5', name: 'Temporal Stress & Cadence Flux', weight: 0.05, rawScore: 14.0, anomalyDetected: false }
+      ],
+      segments: [
+        { id: 'seg-1', startTime: 0.0, endTime: 7.2, syntheticScore: 0.08 },
+        { id: 'seg-2', startTime: 7.2, endTime: 16.5, syntheticScore: 0.11 },
+        { id: 'seg-3', startTime: 16.5, endTime: 24.0, syntheticScore: 0.09 },
+        { id: 'seg-4', startTime: 24.0, endTime: 28.5, syntheticScore: 0.07 }
+      ],
+      transcript: [
+        { id: 't1', timeOffset: 0.5, speaker: 'Receiver (Analyst)', text: 'Good morning Marcus, TrueVoice security center. How are things looking today?' },
+        { id: 't2', timeOffset: 3.8, speaker: 'Caller (Target)', text: 'Hey Devon. Just reviewing our quarterly failover tests. Everything on cluster 4 completed gracefully.' },
+        { id: 't3', timeOffset: 11.2, speaker: 'Receiver (Analyst)', text: 'Excellent. The latency telemetry held steady at under 14ms across all US-East nodes.' },
+        { id: 't4', timeOffset: 17.6, speaker: 'Caller (Target)', text: 'Glad to hear it. Let us keep monitoring the load through market open tomorrow and sync up Thursday.' }
+      ],
+      lockedActions: []
+    };
+
+    const scenarioBorderline = {
+      id: 'borderline',
+      title: '🟡 Borderline: Telephony Degradation & Jitter',
+      type: 'borderline',
+      filename: 'call_rec_2026_09_18_satellite_field_call_dc.wav',
+      fileSize: '2.9 MB',
+      audioDuration: 24.0,
+      sampleRate: '8.0 kHz (AMR-NB Narrowband)',
+      codec: 'AMR-NB 12.2 kbps (Lossy)',
+      channelMode: 'Single Channel (Inbound)',
+      overallRiskScore: 54.2,
+      riskTier: 'CAUTION',
+      compoundingMultiplier: 1.15,
+      threatVerdict: 'SUSPICIOUS TELEPHONY JITTER • STEP-UP OOB CHALLENGE REQUIRED',
+      forensicSha256: '9f8372b0129a88c39e145129c991823a010488df1239aa812390fca1029381a4',
+      biometric: {
+        enrolledId: 'BIO-EXEC-002',
+        fullName: 'David Chen',
+        title: 'VP Engineering & Infrastructure',
+        department: 'Platform Engineering',
+        avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+        ecapaEmbeddingHash: '0x192a839f...centroid_v2',
+        centroidSamples: 36,
+        enrolledDate: '2025-09-12',
+        similarityScore: 0.81,
+        matchThreshold: 0.78,
+        status: 'VERIFIED_MATCH'
+      },
+      factors: [
+        { id: 'f1', name: 'Acoustic Synthetic Artifacts', weight: 0.35, rawScore: 58.0, anomalyDetected: true },
+        { id: 'f2', name: 'ECAPA-TDNN Biometric Mismatch', weight: 0.30, rawScore: 32.0, anomalyDetected: false },
+        { id: 'f3', name: 'Social Engineering & Urgent Wording', weight: 0.20, rawScore: 64.0, anomalyDetected: true },
+        { id: 'f4', name: 'Telephony Route & CDR Anomalies', weight: 0.10, rawScore: 72.0, anomalyDetected: true },
+        { id: 'f5', name: 'Temporal Stress & Cadence Flux', weight: 0.05, rawScore: 45.0, anomalyDetected: false }
+      ],
+      segments: [
+        { id: 'seg-1', startTime: 0.0, endTime: 6.0, syntheticScore: 0.42 },
+        { id: 'seg-2', startTime: 6.0, endTime: 15.0, syntheticScore: 0.62 },
+        { id: 'seg-3', startTime: 15.0, endTime: 24.0, syntheticScore: 0.38 }
+      ],
+      transcript: [
+        { id: 't1', timeOffset: 0.5, speaker: 'Caller (Target)', text: 'Hey team, David here. Calling from satellite terminal at the data center site.' },
+        { id: 't2', timeOffset: 5.8, speaker: 'Caller (Target)', text: 'Connection is patchy. I need you to push an emergency SSH key to bastion-01 for field work.', threat: 'OVERRIDE' },
+        { id: 't3', timeOffset: 12.4, speaker: 'Receiver (Analyst)', text: 'Hi David, your voice is breaking up. TrueVoice flagged connection for Step-Up Out-of-Band Push.' }
+      ],
+      lockedActions: [
+        { id: 'ACT-3', name: 'Emergency Bastion SSH Key Injection (Root)', target: 'prod-bastion-us-east.enterprise', status: 'PENDING_CHALLENGE' }
+      ]
+    };
+
+    const mockIncidentSessions = [
+      { id: 'SES-9021', callId: 'CALL-20260918-092', timestamp: '2026-09-18 14:22:04 UTC', identity: 'Sarah Jenkins (CFO)', riskScore: 88.4, tier: 'CRITICAL', threat: 'Acoustic Clone + $2.45M Escrow Wire', bioMatch: '38%', blocked: 2, hash: 'e3b0c442...b855' },
+      { id: 'SES-9020', callId: 'CALL-20260918-084', timestamp: '2026-09-18 13:41:19 UTC', identity: 'Marcus Vance (CISO)', riskScore: 11.6, tier: 'LOW', threat: 'Clean Executive Review', bioMatch: '94%', blocked: 0, hash: '4a3b8d91...b022' },
+      { id: 'SES-9019', callId: 'CALL-20260918-067', timestamp: '2026-09-18 12:15:30 UTC', identity: 'David Chen (VP Eng)', riskScore: 54.2, tier: 'CAUTION', threat: 'AMR-NB Jitter + Bastion Key Injection', bioMatch: '81%', blocked: 1, hash: '9f8372b0...81a4' }
+    ];
+
+    const mockAudit = [
+      { num: 4892, time: '14:22:24 UTC', type: 'ACTION_OVERRIDE', actor: 'Autonomous Guard Engine', details: 'Locked $2,450,000 SWIFT wire and triggered out-of-band challenge due to 88.4% synthetic risk.', prev: '5e88...42d8', hash: 'e3b0...b855' },
+      { num: 4891, time: '14:22:04 UTC', type: 'INCIDENT_VERDICT', actor: 'Forensic Detection Pipeline v2.4', details: 'Call classified as CRITICAL (88.4%). ECAPA cosine similarity 0.38 (Mismatch).', prev: '7d79...fa24', hash: '5e88...42d8' },
+      { num: 4890, time: '13:41:20 UTC', type: 'INCIDENT_VERDICT', actor: 'Forensic Detection Pipeline v2.4', details: 'Call classified as LOW (11.6%). Identity Marcus Vance (CISO) verified with 0.94 similarity.', prev: '2c26...e7ae', hash: '7d79...fa24' }
+    ];
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      const [tab, setTab] = useState('console');
+      const [scenario, setScenario] = useState(scenarioAttack);
+      const [currentTime, setCurrentTime] = useState(0);
+      const [isPlaying, setIsPlaying] = useState(false);
+      const [persona, setPersona] = useState(personas[0]);
+      const [authOpen, setAuthOpen] = useState(false);
+      const [challengeSent, setChallengeSent] = useState(false);
+      const [auditList, setAuditList] = useState(mockAudit);
+      const [cautionThresh, setCautionThresh] = useState(35);
+      const [verifyThresh, setVerifyThresh] = useState(65);
+      const [blockThresh, setBlockThresh] = useState(85);
+      const [ecapaThresh, setEcapaThresh] = useState(0.78);
+
+      // Playback simulation
+      useEffect(() => {
+        let interval = null;
+        if (isPlaying) {
+          interval = setInterval(() => {
+            setCurrentTime(prev => {
+              if (prev >= scenario.audioDuration) {
+                setIsPlaying(false);
+                return 0;
+              }
+              return prev + 0.2;
+            });
+          }, 200);
+        } else {
+          clearInterval(interval);
+        }
+        return () => clearInterval(interval);
+      }, [isPlaying, scenario.audioDuration]);
+
+      const selectScenario = (type) => {
+        setIsPlaying(false);
+        setCurrentTime(0);
+        if (type === 'attack') setScenario(scenarioAttack);
+        else if (type === 'authentic') setScenario(scenarioAuthentic);
+        else setScenario(scenarioBorderline);
+      };
+
+      const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const custom = {
+          ...scenarioBorderline,
+          id: 'custom',
+          title: `⚡ Ingested Audio: ${file.name}`,
+          filename: file.name,
+          overallRiskScore: 68.2,
+          riskTier: 'VERIFY',
+          threatVerdict: 'VOCAL ANOMALIES DETECTED ON CHANNEL 1 • REQUIRING SECONDARY CONFIRMATION'
+        };
+        setScenario(custom);
+        setAuditList([
+          {
+            num: auditList[0].num + 1,
+            time: 'Just Now',
+            type: 'INCIDENT_VERDICT',
+            actor: persona.name,
+            details: `Uploaded '${file.name}' for forensic analysis. Result: VERIFY (68.2%).`,
+            prev: auditList[0].hash,
+            hash: '0x' + Math.random().toString(16).slice(2, 10) + '...custom'
+          },
+          ...auditList
+        ]);
+      };
+
+      const triggerChallenge = () => {
+        setChallengeSent(true);
+        setTimeout(() => setChallengeSent(false), 3500);
+      };
+
+      // Speedometer needle
+      const needleAngle = -90 + (scenario.overallRiskScore / 100) * 180;
+      const getThemeColor = (s) => s < 30 ? '#047857' : s < 60 ? '#B45309' : s < 80 ? '#C2410C' : '#BE123C';
+
+      return (
+        <div className="min-h-screen bg-[#FBFBFA] flex flex-col bg-warm-radial font-sans text-[#18181B]">
+          
+          {/* Header */}
+          <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-[#EAEAE5] px-6 py-3 shadow-soft-sm">
+            <div className="max-w-[1720px] mx-auto flex flex-col xl:flex-row items-center justify-between gap-4">
+              
+              {/* Brand & Status */}
+              <div className="flex items-center gap-6 w-full xl:w-auto justify-between xl:justify-start">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[#FFF7ED] border border-[#FFEDD5] text-[#EA580C] flex items-center justify-center font-bold text-lg shadow-soft-sm">
+                    TV
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-lg text-[#18181B]">
+                        TrueVoice
+                      </span>
+                      <span className="text-[10px] font-mono bg-[#F4F4F0] text-[#52525B] border border-[#E4E4DF] px-1.5 py-0.2 rounded font-semibold">
+                        ENTERPRISE v2.4
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#71717A] font-mono">
+                      AI Voice Cloning Detection & Impersonation Defense
+                    </p>
+                  </div>
+                </div>
+
+                <div className="hidden md:flex items-center gap-2.5 bg-[#F8F8F6] border border-[#EAEAE5] rounded-full px-3.5 py-1 text-[11px] font-mono">
+                  <span className="flex items-center gap-1.5 text-[#047857] font-medium">
+                    <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
+                    Mode: File Ingestion (Active)
+                  </span>
+                  <span className="text-[#D4D4D0]">|</span>
+                  <span className="text-[#71717A]">
+                    Live Telephony SIP Stream: <span className="text-[#A1A1AA]">Planned (V2)</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Nav */}
+              <nav className="flex items-center gap-1 bg-[#F4F4F0] p-1 rounded-xl border border-[#EAEAE5] text-xs font-medium">
+                {['console', 'sessions', 'speakers', 'audit', 'policies'].map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={`px-3 py-1.5 rounded-lg capitalize transition-all ${
+                      tab === t
+                        ? 'bg-white text-[#18181B] border border-[#EAEAE5] shadow-soft font-semibold'
+                        : 'text-[#71717A] hover:text-[#18181B]'
+                    }`}
+                  >
+                    {t === 'console' ? 'Forensics Console' : t === 'sessions' ? 'Incident Sessions' : t === 'speakers' ? 'Biometrics Vault' : t === 'audit' ? 'Audit Ledger' : 'Policy Tuning'}
+                  </button>
+                ))}
+              </nav>
+
+              {/* Scenario & User */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center bg-[#F4F4F0] border border-[#EAEAE5] rounded-xl p-1 text-xs">
+                  <button onClick={() => selectScenario('attack')} className={`px-2 py-1 rounded-lg font-mono ${scenario.id === 'attack' ? 'bg-[#FFF1F2] text-[#BE123C] border border-[#FECDD3] font-semibold shadow-soft-sm' : 'text-[#71717A]'}`}>🔴 Escrow (88%)</button>
+                  <button onClick={() => selectScenario('authentic')} className={`px-2 py-1 rounded-lg font-mono ${scenario.id === 'authentic' ? 'bg-[#ECFDF5] text-[#047857] border border-[#A7F3D0] font-semibold shadow-soft-sm' : 'text-[#71717A]'}`}>🟢 Authentic (12%)</button>
+                  <button onClick={() => selectScenario('borderline')} className={`px-2 py-1 rounded-lg font-mono ${scenario.id === 'borderline' ? 'bg-[#FFFBEB] text-[#B45309] border border-[#FDE68A] font-semibold shadow-soft-sm' : 'text-[#71717A]'}`}>🟡 Borderline (54%)</button>
+                </div>
+
+                <button onClick={() => setAuthOpen(true)} className="flex items-center gap-2 bg-white border border-[#EAEAE5] hover:border-[#D4D4D0] rounded-xl px-3 py-1.5 transition-all text-left shadow-soft-sm">
+                  <div className="w-7 h-7 rounded-lg bg-[#FFF7ED] border border-[#FFEDD5] text-[#EA580C] font-mono text-xs font-bold flex items-center justify-center">
+                    {persona.avatar}
+                  </div>
+                  <div className="hidden lg:block text-xs text-[#18181B] font-medium">
+                    {persona.name}
+                  </div>
+                </button>
+              </div>
+
+            </div>
+          </header>
+
+          {/* Main Views */}
+          <main className="flex-1 max-w-[1720px] w-full mx-auto p-4 md:p-6">
+            
+            {/* VIEW 1: FORENSICS CONSOLE */}
+            {tab === 'console' && (
+              <div className="space-y-6">
+                {/* Upload Banner */}
+                <div className="bg-white border border-[#EAEAE5] rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-soft">
+                  <div>
+                    <h2 className="text-base font-semibold text-[#18181B]">Recorded Voice Ingestion & Forensics Pipeline</h2>
+                    <p className="text-xs text-[#71717A] mt-0.5">Drag-and-drop or select audio (.wav, .mp3, .m4a, .flac) to compute acoustic Mel-frequency anomalies and ECAPA-TDNN centroid match.</p>
+                  </div>
+                  <label className="cursor-pointer px-4 py-2.5 rounded-xl bg-white hover:bg-[#F4F4F0] border border-[#E4E4DF] text-[#18181B] text-xs font-mono font-semibold transition-colors shadow-soft-sm">
+                    SELECT AUDIO FILE
+                    <input type="file" accept=".wav,.mp3,.m4a,.flac" className="hidden" onChange={handleFileUpload} />
+                  </label>
+                </div>
+
+                {/* 3-Column Console */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                  
+                  {/* Left (Col 1-4): Risk Speedometer */}
+                  <div className="lg:col-span-4 bg-white border border-[#EAEAE5] rounded-2xl p-5 shadow-soft flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-center border-b border-[#EAEAE5] pb-3 mb-4">
+                        <span className="text-xs font-mono uppercase text-[#52525B] font-semibold">Forensic Risk Engine</span>
+                        <span className={`text-xs font-mono px-2.5 py-1 rounded-full border shadow-soft-sm font-semibold ${scenario.overallRiskScore > 70 ? 'bg-[#FFF1F2] text-[#BE123C] border-[#FECDD3]' : scenario.overallRiskScore > 40 ? 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]' : 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]'}`}>
+                          {scenario.riskTier}
+                        </span>
+                      </div>
+
+                      {/* SVG Gauge */}
+                      <div className="flex flex-col items-center justify-center my-3">
+                        <svg className="w-56 h-32 overflow-visible" viewBox="0 0 220 125">
+                          <path d="M 25,110 A 85,85 0 0,1 195,110" fill="none" stroke="#EAEAE5" strokeWidth="14" strokeLinecap="round" />
+                          <path d="M 25,110 A 85,85 0 0,1 195,110" fill="none" stroke={getThemeColor(scenario.overallRiskScore)} strokeWidth="14" strokeDasharray="267" strokeDashoffset={267 - (scenario.overallRiskScore / 100) * 267} strokeLinecap="round" className="transition-all duration-700" />
+                          <g transform={`rotate(${needleAngle}, 110, 110)`} className="transition-transform duration-700 origin-[110px_110px]">
+                            <polygon points="107,110 113,110 111,35 109,35" fill={getThemeColor(scenario.overallRiskScore)} />
+                            <circle cx="110" cy="110" r="7" fill="#FFFFFF" stroke={getThemeColor(scenario.overallRiskScore)} strokeWidth="3" />
+                          </g>
+                        </svg>
+                        <div className="text-4xl font-mono font-extrabold mt-1 text-[#18181B]">
+                          {scenario.overallRiskScore.toFixed(1)}%
+                        </div>
+                        <div className="text-[10px] font-mono text-[#71717A] uppercase tracking-widest">Composite Impersonation Index</div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-[#F9F9F7] border border-[#EAEAE5] text-xs font-mono text-[#27272A] mb-4">
+                        <span className="text-[#EA580C] font-bold">VERDICT: </span>
+                        {scenario.threatVerdict}
+                      </div>
+                    </div>
+
+                    {/* Factors */}
+                    <div className="space-y-2 border-t border-[#EAEAE5] pt-3">
+                      {scenario.factors.map(f => (
+                        <div key={f.id} className="space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-[#27272A] font-medium">{f.name}</span>
+                            <span className="font-mono text-[11px] text-[#71717A]">{(f.weight * 100).toFixed(0)}% wgt · <strong className={f.rawScore > 70 ? 'text-[#BE123C]' : 'text-[#047857]'}>{f.rawScore.toFixed(0)}/100</strong></span>
+                          </div>
+                          <div className="w-full bg-[#F4F4F0] rounded-full h-1.5 overflow-hidden border border-[#EAEAE5]/60">
+                            <div className={`h-full ${f.rawScore > 70 ? 'bg-[#BE123C]' : f.rawScore > 40 ? 'bg-[#EA580C]' : 'bg-[#047857]'} rounded-full`} style={{ width: `${f.rawScore}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Center (Col 5-8): Waveform & Transcript */}
+                  <div className="lg:col-span-5 flex flex-col gap-6">
+                    
+                    {/* Audio Player */}
+                    <div className="bg-white border border-[#EAEAE5] rounded-2xl p-5 shadow-soft">
+                      <div className="flex justify-between items-center border-b border-[#EAEAE5] pb-3 mb-4 text-xs font-mono text-[#18181B]">
+                        <span className="truncate max-w-xs font-semibold">{scenario.filename}</span>
+                        <span className="bg-[#F4F4F0] text-[#52525B] px-2 py-0.5 rounded text-[10px] border border-[#E4E4DF]">{scenario.sampleRate}</span>
+                      </div>
+
+                      {/* Scrubbable Waveform */}
+                      <div
+                        onClick={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const pos = (e.clientX - rect.left) / rect.width;
+                          setCurrentTime(pos * scenario.audioDuration);
+                        }}
+                        className="relative h-24 bg-[#F9F9F7] border border-[#EAEAE5] rounded-xl p-2 cursor-pointer flex items-center justify-between gap-1 overflow-hidden"
+                      >
+                        {Array.from({ length: 50 }, (_, i) => {
+                          const isSynth = scenario.overallRiskScore > 70 && ((i > 8 && i < 20) || (i > 32 && i < 44));
+                          const played = (i / 50) * scenario.audioDuration <= currentTime;
+                          return (
+                            <div key={i} className="flex-1 flex items-center justify-center h-full">
+                              <div
+                                className="w-full max-w-[4px] rounded-full transition-all"
+                                style={{
+                                  height: `${(Math.sin(i * 0.5) * 0.4 + 0.5) * (isSynth ? 90 : 60) + 15}%`,
+                                  backgroundColor: isSynth ? '#F43F5E' : (played ? '#F97316' : '#D4D4D0')
+                                }}
+                              />
+                            </div>
+                          );
+                        })}
+                        {/* Playhead */}
+                        <div
+                          className="absolute top-0 bottom-0 w-[2px] bg-[#EA580C]"
+                          style={{ left: `${(currentTime / scenario.audioDuration) * 100}%` }}
+                        />
+                      </div>
+
+                      {/* Controls */}
+                      <div className="flex justify-between items-center mt-4">
+                        <button
+                          onClick={() => setIsPlaying(!isPlaying)}
+                          className="px-4 py-2 rounded-xl bg-[#EA580C] hover:bg-[#C2410C] text-white font-mono text-xs font-semibold transition-all shadow-soft"
+                        >
+                          {isPlaying ? 'PAUSE' : 'PLAY FORENSICS'}
+                        </button>
+                        <div className="font-mono text-sm text-[#18181B] font-bold">
+                          <span className="text-[#EA580C]">{currentTime.toFixed(1)}s</span> / {scenario.audioDuration.toFixed(1)}s
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Transcript Panel */}
+                    <div className="bg-white border border-[#EAEAE5] rounded-2xl p-5 shadow-soft flex-1">
+                      <div className="flex justify-between items-center border-b border-[#EAEAE5] pb-3 mb-3 text-xs font-mono text-[#71717A]">
+                        <span>Speech-To-Text (ASR) • Time Synced</span>
+                        <span className="text-[10px] text-[#C2410C] bg-[#FFF7ED] px-2 py-0.5 rounded-full font-semibold border border-[#FED7AA]">CLICK TO SEEK</span>
+                      </div>
+                      <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                        {scenario.transcript.map(t => (
+                          <div
+                            key={t.id}
+                            onClick={() => setCurrentTime(t.timeOffset)}
+                            className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all shadow-soft-sm ${
+                              Math.abs(currentTime - t.timeOffset) < 3
+                                ? 'bg-white border-[#EA580C] ring-2 ring-[#EA580C]/20'
+                                : t.threat
+                                ? 'bg-[#FFF7ED] border-[#FED7AA]'
+                                : 'bg-[#F9F9F7] border-[#E4E4DF]'
+                            }`}
+                          >
+                            <div className="flex justify-between text-[11px] font-mono text-[#71717A] mb-1">
+                              <span className={t.speaker.includes('Caller') ? 'text-[#BE123C] font-semibold' : 'text-[#0284C7] font-semibold'}>{t.speaker}</span>
+                              <span>+{t.timeOffset}s</span>
+                            </div>
+                            <p className="text-[#27272A]">{t.text}</p>
+                            {t.threat && (
+                              <span className="inline-block mt-1 text-[10px] font-mono font-bold uppercase bg-[#FFEDD5] text-[#9A3412] px-1.5 py-0.5 rounded border border-[#FED7AA]">
+                                {t.threat}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Right (Col 9-12): Biometrics & Locks */}
+                  <div className="lg:col-span-3 space-y-4">
+                    {/* Biometric Card */}
+                    <div className="bg-white border border-[#EAEAE5] rounded-2xl p-5 shadow-soft">
+                      <div className="flex justify-between items-center border-b border-[#EAEAE5] pb-3 mb-3">
+                        <span className="text-xs font-mono uppercase text-[#52525B] font-semibold">ECAPA-TDNN Match</span>
+                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase shadow-soft-sm ${scenario.biometric.similarityScore < scenario.biometric.matchThreshold ? 'bg-[#FFF1F2] text-[#BE123C] border border-[#FECDD3]' : 'bg-[#ECFDF5] text-[#047857] border border-[#A7F3D0]'}`}>
+                          {scenario.biometric.similarityScore < scenario.biometric.matchThreshold ? 'MISMATCH' : 'VERIFIED'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mb-3">
+                        <img src={scenario.biometric.avatarUrl} alt="" className="w-12 h-12 rounded-xl object-cover border border-[#EAEAE5] shadow-soft-sm" />
+                        <div>
+                          <h4 className="text-sm font-semibold text-[#18181B]">{scenario.biometric.fullName}</h4>
+                          <p className="text-xs text-[#71717A]">{scenario.biometric.title}</p>
+                        </div>
+                      </div>
+                      <div className="bg-[#F9F9F7] p-3 rounded-xl border border-[#EAEAE5] text-xs font-mono space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-[#71717A]">Cosine Similarity:</span>
+                          <span className={`font-bold ${scenario.biometric.similarityScore < scenario.biometric.matchThreshold ? 'text-[#BE123C]' : 'text-[#047857]'}`}>
+                            {scenario.biometric.similarityScore} / {scenario.biometric.matchThreshold} req
+                          </span>
+                        </div>
+                        <div className="w-full bg-[#EAEAE5] rounded-full h-1.5 overflow-hidden">
+                          <div className={`h-full ${scenario.biometric.similarityScore < scenario.biometric.matchThreshold ? 'bg-[#BE123C]' : 'bg-[#047857]'}`} style={{ width: `${scenario.biometric.similarityScore * 100}%` }} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Locks */}
+                    <div className="bg-white border border-[#EAEAE5] rounded-2xl p-5 shadow-soft">
+                      <div className="flex justify-between items-center border-b border-[#EAEAE5] pb-3 mb-3">
+                        <span className="text-xs font-mono uppercase text-[#52525B] font-semibold">Zero-Trust Guard</span>
+                        <span className="text-xs font-mono text-[#BE123C] font-bold">{scenario.lockedActions.length} Locked</span>
+                      </div>
+                      {scenario.lockedActions.length === 0 ? (
+                        <div className="text-xs font-mono text-[#047857] text-center py-4 bg-[#ECFDF5] border border-[#A7F3D0] rounded-xl">No high-risk actions intercepted.</div>
+                      ) : (
+                        <div className="space-y-2">
+                          {scenario.lockedActions.map(a => (
+                            <div key={a.id} className="p-3 rounded-xl bg-[#FFF1F2] border border-[#FECDD3] text-xs shadow-soft-sm">
+                              <div className="font-semibold text-[#18181B]">{a.name}</div>
+                              <div className="text-[11px] font-mono text-[#71717A] truncate">{a.target}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <button
+                        onClick={triggerChallenge}
+                        className={`w-full mt-4 py-2.5 px-4 rounded-xl font-mono text-xs font-semibold transition-all shadow-soft ${
+                          challengeSent ? 'bg-[#047857] text-white' : 'bg-[#EA580C] hover:bg-[#C2410C] text-white font-bold'
+                        }`}
+                      >
+                        {challengeSent ? 'CHALLENGE BROADCASTED (FIDO2)...' : 'ISSUE STEP-UP HARDWARE PUSH'}
+                      </button>
+                    </div>
+
+                  </div>
+
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 2: INCIDENT SESSIONS */}
+            {tab === 'sessions' && (
+              <div className="bg-white border border-[#EAEAE5] rounded-2xl p-5 shadow-soft space-y-4">
+                <h2 className="text-base font-bold text-[#18181B]">Incident Telemetry Sessions</h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead className="bg-[#F8F8F6] text-[#71717A] border-b border-[#EAEAE5] uppercase">
+                      <tr>
+                        <th className="p-3">Call ID</th>
+                        <th className="p-3">Timestamp</th>
+                        <th className="p-3">Target Executive</th>
+                        <th className="p-3">Primary Threat Vector</th>
+                        <th className="p-3">Risk Score</th>
+                        <th className="p-3">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#EAEAE5]">
+                      {mockIncidentSessions.map(s => (
+                        <tr key={s.id} className="hover:bg-[#F9F9F7]">
+                          <td className="p-3 font-bold text-[#EA580C]">{s.callId}</td>
+                          <td className="p-3 text-[#71717A]">{s.timestamp}</td>
+                          <td className="p-3 text-[#18181B] font-sans font-medium">{s.identity}</td>
+                          <td className="p-3 text-[#BE123C] font-sans">{s.threat}</td>
+                          <td className="p-3 font-bold text-[#18181B]">{s.riskScore}% ({s.tier})</td>
+                          <td className="p-3">
+                            <button onClick={() => { selectScenario(s.tier === 'CRITICAL' ? 'attack' : s.tier === 'LOW' ? 'authentic' : 'borderline'); setTab('console'); }} className="text-[#EA580C] font-semibold hover:underline">
+                              Inspect Console →
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 3: BIOMETRICS VAULT */}
+            {tab === 'speakers' && (
+              <div className="space-y-4">
+                <h2 className="text-base font-bold text-[#18181B]">Enrolled Executive Biometrics Enclave</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[scenarioAuthentic.biometric, scenarioAttack.biometric, scenarioBorderline.biometric].map(b => (
+                    <div key={b.enrolledId} className="bg-white border border-[#EAEAE5] rounded-2xl p-5 shadow-soft">
+                      <div className="flex items-center gap-3 mb-3">
+                        <img src={b.avatarUrl} alt="" className="w-12 h-12 rounded-xl object-cover border border-[#EAEAE5] shadow-soft-sm" />
+                        <div>
+                          <div className="font-semibold text-[#18181B]">{b.fullName}</div>
+                          <div className="text-xs text-[#71717A]">{b.title}</div>
+                        </div>
+                      </div>
+                      <div className="text-xs font-mono text-[#52525B] space-y-1">
+                        <div>Dept: <span className="text-[#EA580C] font-semibold">{b.department}</span></div>
+                        <div>Samples: {b.centroidSamples} clean recordings</div>
+                        <div>Centroid: {b.ecapaEmbeddingHash}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 4: AUDIT LEDGER */}
+            {tab === 'audit' && (
+              <div className="bg-white border border-[#EAEAE5] rounded-2xl p-5 shadow-soft space-y-4">
+                <h2 className="text-base font-bold text-[#18181B]">Cryptographic SHA-256 Audit Trail</h2>
+                <div className="space-y-3">
+                  {auditList.map(b => (
+                    <div key={b.num} className="p-4 rounded-xl bg-[#F9F9F7] border border-[#EAEAE5] text-xs font-mono shadow-soft-sm">
+                      <div className="flex justify-between text-[#71717A] mb-1">
+                        <span className="text-[#EA580C] font-bold">Block #{b.num} • {b.type}</span>
+                        <span>{b.time}</span>
+                      </div>
+                      <p className="text-[#27272A] font-sans my-1">{b.details}</p>
+                      <div className="text-[11px] text-[#A1A1AA] truncate">Hash: {b.hash}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* VIEW 5: POLICY TUNING */}
+            {tab === 'policies' && (
+              <div className="max-w-3xl mx-auto bg-white border border-[#EAEAE5] rounded-2xl p-6 shadow-soft space-y-6">
+                <h2 className="text-base font-bold text-[#18181B]">Threat Threshold & Policy Tuning</h2>
+                <div className="space-y-4 text-xs font-mono">
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-[#B45309] font-semibold">Caution Threshold:</span>
+                      <span className="text-[#18181B] font-bold">{cautionThresh}%</span>
+                    </div>
+                    <input type="range" min="10" max="50" value={cautionThresh} onChange={e => setCautionThresh(Number(e.target.value))} className="w-full accent-[#F59E0B]" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-[#EA580C] font-semibold">Step-Up Verify Threshold:</span>
+                      <span className="text-[#18181B] font-bold">{verifyThresh}%</span>
+                    </div>
+                    <input type="range" min="40" max="80" value={verifyThresh} onChange={e => setVerifyThresh(Number(e.target.value))} className="w-full accent-[#EA580C]" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-[#BE123C] font-semibold">Block / Lockdown Threshold:</span>
+                      <span className="text-[#18181B] font-bold">{blockThresh}%</span>
+                    </div>
+                    <input type="range" min="70" max="95" value={blockThresh} onChange={e => setBlockThresh(Number(e.target.value))} className="w-full accent-[#BE123C]" />
+                  </div>
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-[#EA580C] font-semibold">ECAPA Cosine Strictness:</span>
+                      <span className="text-[#18181B] font-bold">{ecapaThresh}</span>
+                    </div>
+                    <input type="range" min="0.6" max="0.9" step="0.01" value={ecapaThresh} onChange={e => setEcapaThresh(Number(e.target.value))} className="w-full accent-[#EA580C]" />
+                  </div>
+                </div>
+                <button onClick={() => alert('Policy saved & synced to cluster.')} className="w-full py-2.5 rounded-xl bg-[#EA580C] hover:bg-[#C2410C] text-white font-mono text-xs font-semibold transition-all shadow-soft">
+                  COMMIT POLICY CHANGES
+                </button>
+              </div>
+            )}
+
+          </main>
+
+          {/* Auth Modal */}
+          {authOpen && (
+            <div className="fixed inset-0 z-50 bg-[#18181B]/30 backdrop-blur-md flex items-center justify-center p-4">
+              <div className="w-full max-w-sm bg-white border border-[#EAEAE5] rounded-2xl p-5 shadow-soft-lg space-y-4">
+                <div className="flex justify-between items-center border-b border-[#EAEAE5] pb-3">
+                  <h3 className="text-sm font-bold font-mono text-[#18181B]">Switch Operator Persona</h3>
+                  <button onClick={() => setAuthOpen(false)} className="text-[#71717A] hover:text-[#18181B]">✕</button>
+                </div>
+                <div className="space-y-2">
+                  {personas.map(p => (
+                    <div
+                      key={p.id}
+                      onClick={() => { setPersona(p); setAuthOpen(false); }}
+                      className={`p-3 rounded-xl border cursor-pointer flex items-center justify-between text-xs transition-all shadow-soft-sm ${
+                        persona.id === p.id ? 'bg-[#FFF7ED] border-[#EA580C] ring-2 ring-[#EA580C]/20' : 'bg-white border-[#EAEAE5] hover:border-[#D4D4D0]'
+                      }`}
+                    >
+                      <div>
+                        <div className="font-semibold text-[#18181B]">{p.name}</div>
+                        <div className="text-[11px] text-[#71717A] font-mono">{p.role}</div>
+                      </div>
+                      <span className="text-[10px] font-mono text-[#52525B] bg-[#F4F4F0] px-2 py-0.5 rounded border border-[#E4E4DF]">{p.badge}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
+          <footer className="border-t border-[#EAEAE5] bg-white/80 py-3 px-6 text-center text-[11px] font-mono text-[#71717A] shadow-soft-sm">
+            TrueVoice Threat Response Console • Zero-Trust Forensic Enclave • US-East-1A
+          </footer>
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
