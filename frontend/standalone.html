@@ -321,8 +321,19 @@
         setTimeout(() => setChallengeSent(false), 3500);
       };
 
-      // Speedometer needle
-      const needleAngle = -90 + (scenario.overallRiskScore / 100) * 180;
+      // Mathematically anchored needle geometry
+      const angleRad = Math.PI * (1 - scenario.overallRiskScore / 100);
+      const needleLength = 58;
+      const tipX = 120 + needleLength * Math.cos(angleRad);
+      const tipY = 100 - needleLength * Math.sin(angleRad);
+
+      const baseWidth = 3;
+      const perpAngle = angleRad + Math.PI / 2;
+      const baseLeftX = 120 + baseWidth * Math.cos(perpAngle);
+      const baseLeftY = 100 - baseWidth * Math.sin(perpAngle);
+      const baseRightX = 120 - baseWidth * Math.cos(perpAngle);
+      const baseRightY = 100 + baseWidth * Math.sin(perpAngle);
+
       const getThemeColor = (s) => s < 30 ? '#047857' : s < 60 ? '#B45309' : s < 80 ? '#C2410C' : '#BE123C';
 
       return (
@@ -435,19 +446,73 @@
                       </div>
 
                       {/* SVG Gauge */}
-                      <div className="flex flex-col items-center justify-center my-3">
-                        <svg className="w-56 h-32 overflow-visible" viewBox="0 0 220 125">
-                          <path d="M 25,110 A 85,85 0 0,1 195,110" fill="none" stroke="#EAEAE5" strokeWidth="14" strokeLinecap="round" />
-                          <path d="M 25,110 A 85,85 0 0,1 195,110" fill="none" stroke={getThemeColor(scenario.overallRiskScore)} strokeWidth="14" strokeDasharray="267" strokeDashoffset={267 - (scenario.overallRiskScore / 100) * 267} strokeLinecap="round" className="transition-all duration-700" />
-                          <g transform={`rotate(${needleAngle}, 110, 110)`} className="transition-transform duration-700 origin-[110px_110px]">
-                            <polygon points="107,110 113,110 111,35 109,35" fill={getThemeColor(scenario.overallRiskScore)} />
-                            <circle cx="110" cy="110" r="7" fill="#FFFFFF" stroke={getThemeColor(scenario.overallRiskScore)} strokeWidth="3" />
-                          </g>
+                      <div className="relative flex flex-col items-center justify-center my-1">
+                        <svg className="w-60 h-32 overflow-visible" viewBox="0 0 240 120">
+                          <defs>
+                            <linearGradient id="warmGaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#10B981" />
+                              <stop offset="35%" stopColor="#F59E0B" />
+                              <stop offset="70%" stopColor="#EA580C" />
+                              <stop offset="100%" stopColor="#BE123C" />
+                            </linearGradient>
+                          </defs>
+
+                          {/* Background Track Arc */}
+                          <path
+                            d="M 44,100 A 76,76 0 0,1 196,100"
+                            fill="none"
+                            stroke="#EAEAE5"
+                            strokeWidth="12"
+                            strokeLinecap="round"
+                          />
+
+                          {/* Value Arc */}
+                          <path
+                            d="M 44,100 A 76,76 0 0,1 196,100"
+                            fill="none"
+                            stroke="url(#warmGaugeGradient)"
+                            strokeWidth="12"
+                            strokeDasharray="238.76"
+                            strokeDashoffset={238.76 - (scenario.overallRiskScore / 100) * 238.76}
+                            strokeLinecap="round"
+                            className="transition-all duration-700 ease-out"
+                          />
+
+                          {/* Mathematically Anchored Needle Tapered Polygon */}
+                          <polygon
+                            points={`${baseLeftX.toFixed(2)},${baseLeftY.toFixed(2)} ${baseRightX.toFixed(2)},${baseRightY.toFixed(2)} ${tipX.toFixed(2)},${tipY.toFixed(2)}`}
+                            fill={getThemeColor(scenario.overallRiskScore)}
+                            className="transition-all duration-700 ease-out"
+                          />
+
+                          {/* Outer Pivot Bezel */}
+                          <circle cx="120" cy="100" r="7.5" fill="#FFFFFF" stroke="#EAEAE5" strokeWidth="2" />
+                          <circle cx="120" cy="100" r="4" fill={getThemeColor(scenario.overallRiskScore)} />
+
+                          {/* Scale End Labels */}
+                          <text x="36" y="116" fill="#A1A1AA" fontSize="10" fontFamily="JetBrains Mono" textAnchor="middle">0%</text>
+                          <text x="120" y="15" fill="#A1A1AA" fontSize="10" fontFamily="JetBrains Mono" textAnchor="middle">50%</text>
+                          <text x="204" y="116" fill="#A1A1AA" fontSize="10" fontFamily="JetBrains Mono" textAnchor="middle">100%</text>
                         </svg>
-                        <div className="text-4xl font-mono font-extrabold mt-1 text-[#18181B]">
-                          {scenario.overallRiskScore.toFixed(1)}%
+
+                        {/* Clean Central Digital Readout (Directly below gauge baseline - ZERO OVERLAP) */}
+                        <div className="text-center mt-2">
+                          <div className="flex items-baseline justify-center gap-1.5 font-mono">
+                            <span className="text-3xl font-extrabold tracking-tight text-[#18181B]">
+                              {scenario.overallRiskScore.toFixed(1)}%
+                            </span>
+                            <span className="text-xs text-[#A1A1AA] font-normal">/ 100</span>
+                          </div>
+                          <div className="text-[11px] font-mono text-[#71717A] uppercase tracking-widest mt-0.5">
+                            Composite Impersonation Index
+                          </div>
                         </div>
-                        <div className="text-[10px] font-mono text-[#71717A] uppercase tracking-widest">Composite Impersonation Index</div>
+
+                        {scenario.compoundingMultiplier > 1.0 && (
+                          <div className="mt-2.5 flex items-center justify-center gap-1.5 px-3 py-1 rounded-full bg-[#FFF7ED] border border-[#FED7AA] text-[#C2410C] text-[11px] font-mono shadow-soft-sm text-center">
+                            <span>Threat Boost: <strong>+{((scenario.compoundingMultiplier - 1.0) * 100).toFixed(0)}%</strong> Active</span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="p-3 rounded-xl bg-[#F9F9F7] border border-[#EAEAE5] text-xs font-mono text-[#27272A] mb-4">
