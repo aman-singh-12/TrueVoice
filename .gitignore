@@ -4,7 +4,6 @@ __pycache__/
 *$py.class
 
 # Virtual environments & local env
-.env
 .venv
 env/
 venv/
@@ -21,3 +20,8 @@ htmlcov/
 # OS files
 .DS_Store
 Thumbs.db
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+config.bat
+node_modules
