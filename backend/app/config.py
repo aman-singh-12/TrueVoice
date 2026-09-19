@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"  # development, production, test
     DEBUG: bool = False
 
+    # Server Networking & CORS
+    BACKEND_HOST: str = "127.0.0.1"
+    BACKEND_PORT: int = 8000
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173"
+
     # Machine Learning Execution Mode
     # "mock": Deterministic fast simulations without heavy checkpoints (CI / tests)
     # "live": Full PyTorch/SpeechBrain/Whisper models
@@ -33,6 +38,12 @@ class Settings(BaseSettings):
 
     # Redis Configuration (Optional real-time pub/sub cache)
     REDIS_URL: Optional[str] = None
+
+    # Email Service (Brevo / Transactional Email - External Cloud Provider)
+    # Cloud/external credential required; real key is not available and must not be fabricated.
+    BREVO_API_KEY: Optional[str] = None
+    BREVO_SENDER_EMAIL: Optional[str] = None
+    BREVO_SENDER_NAME: Optional[str] = None
 
     # Canonical Audio Processing Parameters
     SAMPLE_RATE: int = 16000
@@ -152,6 +163,12 @@ class Settings(BaseSettings):
     @property
     def risk_moderate_threshold(self) -> float:
         return self.CAUTION_THRESHOLD
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        if not self.CORS_ORIGINS or self.CORS_ORIGINS.strip() == "*":
+            return ["*"]
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
     model_config = SettingsConfigDict(
         env_file=".env",

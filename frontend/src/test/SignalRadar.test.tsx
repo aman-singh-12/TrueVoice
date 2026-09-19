@@ -66,7 +66,7 @@ describe('SignalRadar Component', () => {
 
     // Must NOT show 0% for speaker similarity, must show UNAVAILABLE
     const speakerRow = screen.getByTestId('signal-speaker_similarity');
-    expect(speakerRow).toHaveTextContent('N/A (UNENROLLED)');
+    expect(speakerRow).toHaveTextContent('Unavailable');
     expect(speakerRow).not.toHaveTextContent('0%');
   });
 });

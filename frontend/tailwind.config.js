@@ -7,6 +7,19 @@ export default {
   theme: {
     extend: {
       colors: {
+        canvas: '#f3f5f8',
+        sidebar: '#0b1220',
+        line: '#e2e6ee',
+        ink: '#0f172a',
+        mute: '#64748b',
+        brand: {
+          DEFAULT: '#0e7490',
+          hover: '#155e75',
+        },
+        low: '#047857',
+        mod: '#b45309',
+        high: '#c2410c',
+        crit: '#be123c',
         warm: {
           canvas: '#FBFBFA',
           subtle: '#F4F4F0',
@@ -17,7 +30,7 @@ export default {
           wellBorder: '#E4E4DF',
           mutedBar: '#D4D4D0',
         },
-        ink: {
+        inkLegacy: {
           primary: '#18181B',
           secondary: '#71717A',
           muted: '#52525B',

@@ -19,6 +19,9 @@ import type {
   RiskAssessmentResponse,
   AuditLogResponse,
   AuditChainValidationResult,
+  SpeakerResponse,
+  PolicyCreate,
+  PolicyResponse,
 } from '../types/api';
 
 class ApiError extends Error {
@@ -36,7 +39,7 @@ class ApiError extends Error {
 class ApiClient {
   private token: string | null = null;
   private user: TokenResponse | null = null;
-  private baseUrl: string = '';
+  private baseUrl: string = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
 
   constructor() {
     // Check if previously stored in sessionStorage for persistence across page refreshes
@@ -224,6 +227,42 @@ class ApiClient {
     return this.request<AuditChainValidationResult>(
       `/v1/audit/${sessionId}/verify-chain`
     );
+  }
+
+  // --- Speaker Biometrics Endpoints ---
+
+  public async listSpeakers(skip = 0, limit = 50): Promise<SpeakerResponse[]> {
+    return this.request<SpeakerResponse[]>(`/v1/speakers?skip=${skip}&limit=${limit}`);
+  }
+
+  public async getSpeaker(speakerId: string): Promise<SpeakerResponse> {
+    return this.request<SpeakerResponse>(`/v1/speakers/${speakerId}`);
+  }
+
+  public async enrollSpeaker(formData: FormData): Promise<SpeakerResponse> {
+    return this.request<SpeakerResponse>('/v1/speakers/enroll', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  // --- Policy Endpoints ---
+
+  public async getActivePolicy(): Promise<PolicyResponse | null> {
+    return this.request<PolicyResponse | null>('/v1/policies');
+  }
+
+  public async createOrUpdatePolicy(data: PolicyCreate): Promise<PolicyResponse> {
+    return this.request<PolicyResponse>('/v1/policies', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // --- Health Endpoints ---
+
+  public async getHealth(): Promise<{ status: string; service: string; version: string; database: string }> {
+    return this.request<{ status: string; service: string; version: string; database: string }>('/health');
   }
 }
 

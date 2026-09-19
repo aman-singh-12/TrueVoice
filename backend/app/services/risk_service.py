@@ -95,8 +95,6 @@ class RiskService:
             sequence_id=sequence_id,
             transcript_redacted=transcript_redacted,
             detected_intent_flags=detected_intent_flags,
-            threat_level=threat_level,
-            confidence=confidence,
         )
         self.db.add(analysis)
         await self.db.commit()

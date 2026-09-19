@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ThreatPolicy } from '../../types';
+import { api } from '../../services/api';
 
 interface PolicyTuningViewProps {
   initialPolicy: ThreatPolicy;
@@ -12,11 +13,51 @@ export const PolicyTuningView: React.FC<PolicyTuningViewProps> = ({
 }) => {
   const [policy, setPolicy] = useState<ThreatPolicy>(initialPolicy);
   const [saveToast, setSaveToast] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
 
-  const handleSave = () => {
-    onSavePolicy(policy);
-    setSaveToast('Policy rules committed to cryptographic audit ledger and synchronized across active cluster nodes.');
-    setTimeout(() => setSaveToast(null), 3500);
+  const fetchActivePolicy = useCallback(async () => {
+    try {
+      const activePolicy = await api.getActivePolicy();
+      if (activePolicy) {
+        setPolicy((prev) => ({
+          ...prev,
+          cautionThreshold: activePolicy.caution_threshold,
+          verifyThreshold: activePolicy.verify_threshold,
+          blockThreshold: activePolicy.block_threshold,
+          highValueWireLockdown: activePolicy.enforce_transaction_lock ?? true,
+        }));
+      }
+    } catch (err) {
+      console.warn('Could not load backend policy:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchActivePolicy();
+  }, [fetchActivePolicy]);
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      await api.createOrUpdatePolicy({
+        policy_name: 'Default Zero-Trust Policy',
+        caution_threshold: policy.cautionThreshold,
+        verify_threshold: policy.verifyThreshold,
+        block_threshold: policy.blockThreshold,
+        enforce_transaction_lock: policy.highValueWireLockdown,
+        sensitive_amount_threshold: 250000.0,
+        oob_timeout_seconds: 30,
+        version: '1.2.0',
+      });
+      onSavePolicy(policy);
+      setSaveToast('Policy rules committed to cryptographic audit ledger and synchronized across active cluster nodes.');
+    } catch (err) {
+      setSaveToast(`Policy save notice: ${(err as Error).message}. Local parameters updated.`);
+      onSavePolicy(policy);
+    } finally {
+      setIsSaving(false);
+      setTimeout(() => setSaveToast(null), 4000);
+    }
   };
 
   const handleReset = () => {
@@ -65,9 +106,19 @@ export const PolicyTuningView: React.FC<PolicyTuningViewProps> = ({
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 rounded-xl bg-[#EA580C] hover:bg-[#C2410C] text-white font-mono text-xs font-semibold transition-all shadow-soft"
+            disabled={isSaving}
+            className="px-4 py-2 rounded-xl bg-[#EA580C] hover:bg-[#C2410C] disabled:opacity-50 text-white font-mono text-xs font-semibold transition-all shadow-soft flex items-center gap-2"
           >
-            SAVE POLICY CHANGES
+            {isSaving ? (
+              <>
+                <svg className="w-3.5 h-3.5 animate-spin text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                SYNCING POLICY...
+              </>
+            ) : (
+              'SAVE POLICY CHANGES'
+            )}
           </button>
         </div>
       </div>

@@ -1,12 +1,6 @@
-/**
- * TrueVoice Secondary Verification Challenge Modal.
- * Renders high-entropy cryptographic challenge, countdown timer (30s TTL),
- * and executes verification submission against POST /v1/verification/verify.
- * STRICT: NEVER simulates verification success locally. Always delegates to backend API.
- */
-
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { ChallengeResponse, VerificationResultSummary } from '../types/api';
+import { Button } from './ui/primitives';
 
 export interface ChallengeModalProps {
   challenge: ChallengeResponse | null;
@@ -19,19 +13,18 @@ export interface ChallengeModalProps {
   ) => Promise<VerificationResultSummary>;
 }
 
-export const ChallengeModal: React.FC<ChallengeModalProps> = ({
+export function ChallengeModal({
   challenge,
   isOpen,
   onClose,
   onSubmitVerification,
-}) => {
+}: ChallengeModalProps) {
   const [signatureInput, setSignatureInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [resultSummary, setResultSummary] = useState<VerificationResultSummary | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(30);
 
-  // Compute countdown timer
   useEffect(() => {
     if (!isOpen || !challenge) {
       setSignatureInput('');
@@ -41,13 +34,9 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
     }
 
     const targetTime = new Date(challenge.expires_at).getTime();
-
     const updateTimer = () => {
-      const now = Date.now();
-      const diffSec = Math.max(0, Math.ceil((targetTime - now) / 1000));
-      setRemainingSeconds(diffSec);
+      setRemainingSeconds(Math.max(0, Math.ceil((targetTime - Date.now()) / 1000)));
     };
-
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
@@ -61,12 +50,10 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
       setErrorMsg('Please enter verification code or signature');
       return;
     }
-
     if (remainingSeconds <= 0) {
       setErrorMsg('Challenge has expired. Please request a new verification challenge.');
       return;
     }
-
     try {
       setIsSubmitting(true);
       setErrorMsg(null);
@@ -77,9 +64,7 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
       );
       setResultSummary(res);
       if (res.status === 'SUCCESS') {
-        setTimeout(() => {
-          onClose();
-        }, 1800);
+        setTimeout(() => onClose(), 1800);
       }
     } catch (err) {
       setErrorMsg((err as Error).message || 'Verification submission failed');
@@ -91,75 +76,68 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
   const timerPercent = Math.max(0, Math.min(100, (remainingSeconds / (challenge.ttl_seconds || 30)) * 100));
 
   return (
-    <div className="modal-backdrop" data-testid="challenge-modal">
-      <div className="modal-dialog">
-        <div className="modal-header">
-          <div className="modal-title-group">
-            <span className="modal-icon">🔐</span>
-            <div>
-              <h2 className="modal-title">SECONDARY VERIFICATION REQUIRED</h2>
-              <p className="modal-subtitle">Out-of-Band (OOB) Cryptographic Challenge</p>
-            </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+      data-testid="challenge-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="challenge-title"
+    >
+      <div className="w-full max-w-lg rounded-lg border border-line bg-white shadow-lg">
+        <div className="flex items-start justify-between border-b border-line px-5 py-4">
+          <div>
+            <h2 id="challenge-title" className="text-base font-semibold">
+              Verification required
+            </h2>
+            <p className="text-xs text-mute">Out-of-band challenge from the backend</p>
           </div>
-          <button
-            type="button"
-            className="modal-close-btn"
-            onClick={onClose}
-            aria-label="Close"
-          >
+          <button type="button" onClick={onClose} aria-label="Close" className="rounded-md px-2 text-mute hover:bg-canvas">
             ×
           </button>
         </div>
-
-        <div className="modal-body">
-          {/* TTL Countdown Bar */}
-          <div className="ttl-bar-wrapper">
-            <div className="ttl-meta">
-              <span className="ttl-label">Challenge Validity</span>
-              <span className={`ttl-seconds ${remainingSeconds <= 5 ? 'urgent' : ''}`}>
+        <div className="space-y-4 px-5 py-4">
+          <div>
+            <div className="mb-1 flex justify-between text-xs">
+              <span className="text-mute">Challenge validity</span>
+              <span className={remainingSeconds <= 5 ? 'font-semibold text-crit' : 'text-ink'}>
                 {remainingSeconds}s remaining
               </span>
             </div>
-            <div className="ttl-track">
+            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
               <div
-                className={`ttl-fill ${remainingSeconds <= 5 ? 'urgent' : ''}`}
+                className={`h-full ${remainingSeconds <= 5 ? 'bg-crit' : 'bg-brand'}`}
                 style={{ width: `${timerPercent}%` }}
               />
             </div>
           </div>
 
-          {/* Nonce Card */}
-          <div className="nonce-card">
-            <span className="nonce-label">CHALLENGE NONCE</span>
-            <div className="nonce-display">
-              <code>{challenge.nonce}</code>
-            </div>
-            <p className="nonce-instructions">{challenge.instructions}</p>
+          <div className="rounded-md bg-canvas px-4 py-3 text-center">
+            <p className="text-xs font-medium uppercase tracking-wide text-mute">Challenge nonce</p>
+            <code className="mt-1 block text-2xl font-semibold tracking-widest">{challenge.nonce}</code>
+            <p className="mt-2 text-xs text-mute">{challenge.instructions}</p>
           </div>
 
-          {/* Result Alert if available */}
-          {resultSummary && (
+          {resultSummary ? (
             <div
-              className={`result-alert ${resultSummary.status === 'SUCCESS' ? 'success' : 'error'}`}
+              className={`rounded-md px-3 py-2 text-sm ${
+                resultSummary.status === 'SUCCESS' ? 'bg-emerald-50 text-low' : 'bg-red-50 text-crit'
+              }`}
             >
-              {resultSummary.status === 'SUCCESS' ? '✅' : '❌'}{' '}
               <strong>{resultSummary.status}:</strong> {resultSummary.message}
             </div>
-          )}
+          ) : null}
+          {errorMsg ? <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-crit">{errorMsg}</div> : null}
 
-          {errorMsg && <div className="result-alert error">⚠️ {errorMsg}</div>}
-
-          {/* Input Form */}
           {!resultSummary || resultSummary.status !== 'SUCCESS' ? (
-            <form onSubmit={handleSubmit} className="verification-form">
-              <div className="form-group">
-                <label htmlFor="sig-input" className="form-label">
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div>
+                <label htmlFor="sig-input" className="mb-1 block text-sm font-medium">
                   Enter Received OTP / Biometric Token:
                 </label>
                 <input
                   id="sig-input"
                   type="text"
-                  className="text-input"
+                  className="h-10 w-full rounded-md border border-line px-3 text-sm"
                   placeholder="e.g., OTP code or nonce copy"
                   value={signatureInput}
                   onChange={(e) => setSignatureInput(e.target.value)}
@@ -167,32 +145,20 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
                   autoFocus
                 />
               </div>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                >
+              <div className="flex justify-end gap-2">
+                <Button onClick={onClose} disabled={isSubmitting}>
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={isSubmitting || remainingSeconds === 0}
-                >
+                </Button>
+                <Button type="submit" variant="primary" disabled={isSubmitting || remainingSeconds === 0}>
                   {isSubmitting ? 'Verifying...' : 'Submit Verification'}
-                </button>
+                </Button>
               </div>
             </form>
           ) : (
-            <div className="verified-success-message">
-              <p>Session trust state upgraded to <strong>TRUSTED</strong>.</p>
-            </div>
+            <p className="text-sm">Verification confirmed by the backend.</p>
           )}
         </div>
       </div>
     </div>
   );
-};
+}

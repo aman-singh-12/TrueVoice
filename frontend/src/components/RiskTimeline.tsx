@@ -76,15 +76,11 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) =
 
   return (
     <div className="risk-timeline-card" data-testid="risk-timeline">
-      <div className="card-header">
-        <h3 className="card-title">REAL-TIME RISK PROGRESSION</h3>
-        <div className="timeline-legend">
-          <span className="legend-item risk-legend">
-            <span className="legend-line risk-line-sample" /> Composite Risk
-          </span>
-          <span className="legend-item df-legend">
-            <span className="legend-line df-line-sample" /> Deepfake Prob
-          </span>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-mute">Last evaluations</p>
+        <div className="flex gap-3 text-xs text-mute">
+          <span>Risk</span>
+          <span>Deepfake</span>
         </div>
       </div>
 
@@ -144,7 +140,7 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) =
             y1={getY(0)}
             x2={width - padding.right}
             y2={getY(0)}
-            stroke="#374151"
+            stroke="#e2e8f0"
             strokeWidth="1"
           />
           <text x={padding.left - 6} y={getY(0) + 4} textAnchor="end" className="axis-label">
@@ -161,7 +157,7 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) =
               <path
                 d={deepfakePath}
                 fill="none"
-                stroke="#c084fc"
+                stroke="#64748b"
                 strokeWidth="1.5"
                 strokeDasharray="3 3"
                 opacity="0.8"
@@ -171,7 +167,7 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) =
               <path
                 d={riskPath}
                 fill="none"
-                stroke="#38bdf8"
+                stroke="#0e7490"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -183,7 +179,7 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) =
                   cx={getX(maxPoints - 1, maxPoints)}
                   cy={getY(data[data.length - 1].risk_score)}
                   r="4"
-                  fill="#38bdf8"
+                  fill="#0e7490"
                   stroke="#ffffff"
                   strokeWidth="1.5"
                   className="pulse-dot"
@@ -200,7 +196,7 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) =
               className="chart-empty-text"
               fill="#4b5563"
             >
-              AWAITING AUDIO STREAM...
+              No live samples yet
             </text>
           )}
         </svg>

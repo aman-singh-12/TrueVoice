@@ -14,6 +14,16 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ tier, size = 'md', sho
       dot: 'bg-[#047857]',
       label: 'LOW RISK'
     },
+    MODERATE: {
+      bg: 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]',
+      dot: 'bg-[#B45309]',
+      label: 'MODERATE RISK'
+    },
+    HIGH: {
+      bg: 'bg-[#FFF7ED] text-[#C2410C] border-[#FED7AA]',
+      dot: 'bg-[#EA580C]',
+      label: 'HIGH RISK'
+    },
     CAUTION: {
       bg: 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]',
       dot: 'bg-[#B45309]',

@@ -155,3 +155,33 @@ export interface AuditChainValidationResult {
   tampered_at_sequence: number | null;
   message: string;
 }
+
+// Speaker Biometrics
+export interface SpeakerResponse {
+  id: string;
+  org_id: string;
+  display_name: string;
+  designation: string;
+  is_active: boolean;
+  created_at: string;
+  has_enrolled_voiceprint: boolean;
+}
+
+// Policies
+export interface PolicyCreate {
+  policy_name: string;
+  caution_threshold: number;
+  verify_threshold: number;
+  block_threshold: number;
+  enforce_transaction_lock?: boolean;
+  sensitive_amount_threshold?: number;
+  oob_timeout_seconds?: number;
+  version?: string;
+}
+
+export interface PolicyResponse extends PolicyCreate {
+  id: string;
+  org_id: string;
+  created_at: string;
+}
+
