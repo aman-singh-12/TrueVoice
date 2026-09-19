@@ -49,8 +49,12 @@ class Settings(BaseSettings):
         return int(self.SAMPLE_RATE * self.HOP_SECONDS)
 
     # Active Model Configurations
-    DEEPFAKE_PRIMARY_DETECTOR: str = "wav2vec2"  # wav2vec2, rawnet2, aasist, mock
+    DEEPFAKE_PRIMARY_DETECTOR: str = "wav2vec2"  # wav2vec2, rawnet2, aasist, ensemble, mock
     DEEPFAKE_SECONDARY_DETECTOR: Optional[str] = None
+    TRUEVOICE_WAV2VEC2_MODEL: Optional[str] = None
+    TRUEVOICE_RAWNET2_MODEL: Optional[str] = None
+    TRUEVOICE_AASIST_MODEL: Optional[str] = None
+    TRUEVOICE_ML_DEVICE: str = "cpu"  # cpu or cuda
     SPEAKER_VERIFIER_MODEL: str = "ecapa"
     ASR_MODEL: str = "faster-whisper-tiny"  # tiny, base, small
     SPEAKER_COSINE_THRESHOLD: float = 0.75  # Default threshold for normalized geometric similarity
@@ -96,7 +100,7 @@ class Settings(BaseSettings):
 
     @property
     def ml_device(self) -> str:
-        return "cpu"
+        return self.TRUEVOICE_ML_DEVICE
 
     @property
     def secret_key(self) -> str:
