@@ -193,7 +193,9 @@ class AudioService:
             session=session,
             composite_risk=composite_risk,
             signal_scores=signal_scores,
-            context_features=session.context_metadata
+            context_features=session.context_metadata or {},
+            signal_availability=fusion_telemetry.get("signal_availability"),
+            contributing_factors=primary_factors,
         )
 
         # 6. Persist Risk Assessment Record

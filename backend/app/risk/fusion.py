@@ -6,7 +6,12 @@ Fuses 5 independent signals with dynamic weight re-normalization:
 - S_conv: Conversational threat score (0-1)
 - S_context: Operational context sensitivity score (0-1)
 - S_forensic: Physical acoustic anomaly score (0-100)
-Applies compounding multiplier (Gamma=1.35) and asymmetric EMA temporal smoothing.
+
+Applies non-linear compounding multiplier (Gamma=1.35) for dual critical anomalies.
+Explicitly tracks signal availability without silently coercing missing signals to safe or malicious.
+
+NOTE: The output score is a NORMALIZED SECURITY RISK SCORE in [0.0, 100.0].
+It is NOT a probability of fraud, NOT a percentage certainty, and NOT proof of fraud.
 """
 
 from typing import Any, Dict, List, Optional, Tuple
@@ -17,19 +22,26 @@ from app.core.constants import RiskTier, SignalAvailability
 
 
 def classify_risk_tier(score: float) -> RiskTier:
-    """Categorize continuous composite score into standard TrueVoice risk tier."""
-    if score >= 80.0:
+    """
+    Categorize continuous composite risk score into standard TrueVoice risk tier:
+    0.0  - 29.9 : LOW (Standard operational monitoring)
+    30.0 - 59.9 : MODERATE (Heightened scrutiny / warning)
+    60.0 - 79.9 : HIGH (Step-up secondary verification required)
+    80.0 - 100.0: CRITICAL (Immediate defensive action / block)
+    """
+    clamped = float(np.clip(score, 0.0, 100.0))
+    if clamped >= 80.0:
         return RiskTier.CRITICAL
-    elif score >= 60.0:
+    elif clamped >= 60.0:
         return RiskTier.HIGH
-    elif score >= 30.0:
+    elif clamped >= 30.0:
         return RiskTier.MODERATE
     else:
         return RiskTier.LOW
 
 
 class MultiSignalRiskFusion:
-    """Mathematical multi-signal risk aggregator with dynamic re-normalization."""
+    """Mathematical multi-signal risk aggregator with dynamic re-normalization and explicit availability."""
 
     def __init__(
         self,
@@ -63,37 +75,41 @@ class MultiSignalRiskFusion:
         for_avail: SignalAvailability,
     ) -> Tuple[float, Dict[str, float], bool]:
         """
-        Calculate raw composite risk score R_raw in [0.0, 100.0].
+        Calculate raw composite security risk score R_raw in [0.0, 100.0].
+        Adapts dynamically to whichever subset of signals is available.
+        Never treats missing signals as either safe (0.0) or malicious (1.0).
+
         Returns:
             (r_raw: float, active_weights: Dict[str, float], has_compounding: bool)
         """
-        active_signals = {}
+        active_signals: Dict[str, float] = {}
 
-        # 1. Evaluate deepfake signal
+        # 1. Deepfake signal (0-100 -> 0-1)
         if df_avail == SignalAvailability.AVAILABLE:
             active_signals["deepfake"] = float(np.clip(s_df / 100.0, 0.0, 1.0))
 
-        # 2. Evaluate speaker mismatch signal (1.0 - S_speaker)
+        # 2. Speaker mismatch signal (1.0 - S_speaker)
         if spk_avail == SignalAvailability.AVAILABLE and s_speaker is not None:
             mismatch = float(np.clip(1.0 - s_speaker, 0.0, 1.0))
             active_signals["speaker"] = mismatch
 
-        # 3. Evaluate conversational threat signal
+        # 3. Conversational threat signal (0-1)
         if conv_avail == SignalAvailability.AVAILABLE:
             active_signals["conversation"] = float(np.clip(s_conv, 0.0, 1.0))
 
-        # 4. Evaluate context sensitivity signal
+        # 4. Context sensitivity signal (0-1)
         if ctx_avail == SignalAvailability.AVAILABLE:
             active_signals["context"] = float(np.clip(s_context, 0.0, 1.0))
 
-        # 5. Evaluate forensic anomaly signal
+        # 5. Forensic acoustic anomaly signal (0-100 -> 0-1)
         if for_avail == SignalAvailability.AVAILABLE:
             active_signals["forensics"] = float(np.clip(s_forensic / 100.0, 0.0, 1.0))
 
-        # Dynamic weight re-normalization across available signals
+        # If zero signals available, return 0 risk baseline and empty weights
         if not active_signals:
             return 0.0, {}, False
 
+        # Dynamic weight re-normalization across available signals
         active_weight_sum = sum(self.base_weights[k] for k in active_signals.keys())
         if active_weight_sum <= 0:
             active_weight_sum = 1.0
@@ -107,12 +123,16 @@ class MultiSignalRiskFusion:
         # Non-linear compounding multiplier (Gamma=1.35) for dual high-risk anomaly
         has_compounding = False
         if df_avail == SignalAvailability.AVAILABLE and s_df >= 70.0:
-            spk_elevated = (spk_avail == SignalAvailability.AVAILABLE and s_speaker is not None and s_speaker <= 0.50)
+            spk_elevated = (
+                spk_avail == SignalAvailability.AVAILABLE
+                and s_speaker is not None
+                and s_speaker <= 0.50
+            )
             conv_elevated = (conv_avail == SignalAvailability.AVAILABLE and s_conv >= 0.70)
-            if spk_elevated or conv_elevated:
+            ctx_elevated = (ctx_avail == SignalAvailability.AVAILABLE and s_context >= 0.70)
+            if spk_elevated or conv_elevated or ctx_elevated:
                 r_linear = r_linear * self.gamma
                 has_compounding = True
-
 
         r_raw = float(np.clip(r_linear, 0.0, 100.0))
         return round(r_raw, 2), normalized_weights, has_compounding

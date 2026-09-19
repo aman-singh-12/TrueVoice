@@ -73,7 +73,9 @@ class PolicyService:
         session: CallSession,
         composite_risk: float,
         signal_scores: Dict[str, float],
-        context_features: Dict[str, Any]
+        context_features: Dict[str, Any],
+        signal_availability: Optional[Dict[str, Any]] = None,
+        contributing_factors: Optional[List[str]] = None,
     ) -> PolicyEvaluationResult:
         """
         Evaluate real-time risk against active policy and execute action if warranted.
@@ -86,14 +88,15 @@ class PolicyService:
             "block_threshold": active_policy.block_threshold if active_policy else 80.0,
         }
 
-
         engine = DeclarativePolicyEngine(tenant_policy=policy_rules)
         current_state = TrustState(session.current_trust_state)
         eval_result = engine.evaluate(
             composite_risk=composite_risk,
             current_state=current_state,
             signal_scores=signal_scores,
-            context_features=context_features
+            context_features=context_features,
+            signal_availability=signal_availability,
+            contributing_factors=contributing_factors,
         )
 
         # Record security action if action is not simply ALLOW
