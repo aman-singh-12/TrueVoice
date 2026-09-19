@@ -1,6 +1,7 @@
 """
-Spectral Flatness and Spectral Flux Extraction.
+Spectral Flatness, Spectral Flux, Spectral Centroid, and Spectral Rolloff Extraction.
 Measures frequency energy distribution and frame-to-frame spectral transitions.
+Deterministic physical acoustic signal measurements.
 """
 
 from typing import Tuple
@@ -42,3 +43,61 @@ def compute_spectral_features(
         flux = 0.0
 
     return float(flatness), float(flux)
+
+
+def compute_spectral_centroid(
+    audio: np.ndarray, sample_rate: int = 16000, n_fft: int = 512, hop_len: int = 256
+) -> float:
+    """
+    Compute mean Spectral Centroid (center of mass of spectrum in Hz).
+    High spectral centroid indicates high-frequency energy concentration.
+    """
+    if len(audio) < n_fft:
+        return 0.0
+
+    num_frames = (len(audio) - n_fft) // hop_len + 1
+    window = np.hanning(n_fft)
+    freqs = np.fft.rfftfreq(n_fft, d=1.0 / sample_rate)
+
+    centroids = []
+    for i in range(num_frames):
+        start = i * hop_len
+        frame = audio[start : start + n_fft] * window
+        mag = np.abs(np.fft.rfft(frame))
+        mag_sum = np.sum(mag)
+        if mag_sum > 1e-12:
+            centroid = np.sum(freqs * mag) / mag_sum
+            centroids.append(centroid)
+
+    return float(np.mean(centroids)) if centroids else 0.0
+
+
+def compute_spectral_rolloff(
+    audio: np.ndarray,
+    sample_rate: int = 16000,
+    roll_percent: float = 0.85,
+    n_fft: int = 512,
+    hop_len: int = 256,
+) -> float:
+    """
+    Compute mean Spectral Rolloff (frequency below which roll_percent of spectral energy resides).
+    """
+    if len(audio) < n_fft:
+        return 0.0
+
+    num_frames = (len(audio) - n_fft) // hop_len + 1
+    window = np.hanning(n_fft)
+    freqs = np.fft.rfftfreq(n_fft, d=1.0 / sample_rate)
+
+    rolloffs = []
+    for i in range(num_frames):
+        start = i * hop_len
+        frame = audio[start : start + n_fft] * window
+        mag_sq = np.abs(np.fft.rfft(frame)) ** 2
+        threshold = roll_percent * np.sum(mag_sq)
+        cum_energy = np.cumsum(mag_sq)
+        idx = np.searchsorted(cum_energy, threshold)
+        idx = min(idx, len(freqs) - 1)
+        rolloffs.append(freqs[idx])
+
+    return float(np.mean(rolloffs)) if rolloffs else 0.0
