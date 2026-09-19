@@ -56,8 +56,23 @@ class Settings(BaseSettings):
     TRUEVOICE_AASIST_MODEL: Optional[str] = None
     TRUEVOICE_ML_DEVICE: str = "cpu"  # cpu or cuda
     SPEAKER_VERIFIER_MODEL: str = "ecapa"
-    ASR_MODEL: str = "faster-whisper-tiny"  # tiny, base, small
-    SPEAKER_COSINE_THRESHOLD: float = 0.75  # Default threshold for normalized geometric similarity
+    ASR_MODEL: str = "faster-whisper-small"  # tiny, base, small, medium, large-v3
+
+    # ECAPA-TDNN Speaker Verification Configuration
+    # NOTE: TRUEVOICE_SPEAKER_THRESHOLD is a configurable operational threshold (operating point)
+    # on normalized geometric similarity in [0.0, 1.0], not an empirically validated universal EER constant.
+    TRUEVOICE_SPEAKER_THRESHOLD: float = 0.75
+    SPEAKER_COSINE_THRESHOLD: float = 0.75  # Backward compatibility alias
+    TRUEVOICE_SPEAKER_DEVICE: str = "cpu"    # "cpu" or "cuda"
+    SPEAKER_MODEL_SOURCE: str = "speechbrain/spkrec-ecapa-voxceleb"
+
+    # Faster-Whisper Automatic Speech Recognition (ASR) Configuration
+    TRUEVOICE_ASR_MODEL: str = "small"       # tiny, base, small, medium, large-v3
+    TRUEVOICE_ASR_DEVICE: str = "cpu"        # "cpu" or "cuda"
+    TRUEVOICE_ASR_COMPUTE_TYPE: str = "int8" # "int8", "float16", "float32", "auto"
+    # Multilingual support: None enables automatic language detection (English, Hindi, Punjabi, code-switched)
+    TRUEVOICE_ASR_LANGUAGE: Optional[str] = None
+    TRUEVOICE_ASR_BEAM_SIZE: int = 5
 
     # Baseline Multi-Signal Risk Fusion Weights (Sum = 1.0)
     WEIGHT_DEEPFAKE: float = 0.35
