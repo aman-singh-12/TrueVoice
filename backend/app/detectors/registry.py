@@ -9,9 +9,7 @@ from app.config import settings
 from app.core.logging import logger
 from app.detectors.base import DeepfakeDetector
 from app.detectors.mock import MockDeepfakeDetector
-from app.detectors.wav2vec2.detector import Wav2Vec2Detector
-from app.detectors.rawnet2.detector import RawNet2Detector
-from app.detectors.aasist.detector import AASISTDetector
+from app.detectors.config import DetectorConfig
 
 
 class DetectorRegistry:
@@ -26,6 +24,12 @@ class DetectorRegistry:
             cls._instance = DetectorRegistry()
         return cls._instance
 
+    @classmethod
+    def reset(cls) -> None:
+        """Reset singleton state for testing."""
+        cls._instance = None
+        cls._active_detector = None
+
     def initialize_primary_detector(self) -> DeepfakeDetector:
         """
         Resolve and initialize ONLY the configured primary detector.
@@ -36,23 +40,30 @@ class DetectorRegistry:
 
         mode = settings.TRUEVOICE_ML_MODE.lower()
         primary_name = settings.DEEPFAKE_PRIMARY_DETECTOR.lower()
+        device = DetectorConfig.get_device()
 
-        logger.info(f"Initializing primary deepfake detector: {primary_name} (Mode: {mode})")
+        logger.info(f"Initializing primary deepfake detector: {primary_name} (Mode: {mode}, Device: {device})")
 
         if mode == "mock" or primary_name == "mock":
             self._active_detector = MockDeepfakeDetector()
         elif primary_name == "wav2vec2":
+            from app.detectors.wav2vec2.detector import Wav2Vec2Detector
             self._active_detector = Wav2Vec2Detector()
         elif primary_name == "rawnet2":
+            from app.detectors.rawnet2.detector import RawNet2Detector
             self._active_detector = RawNet2Detector()
         elif primary_name == "aasist":
+            from app.detectors.aasist.detector import AASISTDetector
             self._active_detector = AASISTDetector()
+        elif primary_name == "ensemble":
+            from app.detectors.ensemble.detector import EnsembleDetector
+            self._active_detector = EnsembleDetector()
         else:
             logger.warning(f"Unknown detector '{primary_name}', falling back to MockDeepfakeDetector")
             self._active_detector = MockDeepfakeDetector()
 
-        # Load weights once at worker startup
-        self._active_detector.load_model(device="cpu")
+        # Load weights once at worker startup onto configured device
+        self._active_detector.load_model(device=device)
         logger.info(
             f"Primary detector resident in memory: {self._active_detector.get_model_name()} "
             f"({self._active_detector.get_model_version()})"

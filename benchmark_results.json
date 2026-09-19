@@ -1,0 +1,269 @@
+{
+  "metadata": {
+    "benchmark_suite": "TrueVoice Offline Benchmark",
+    "version": "1.0.0",
+    "timestamp": "2026-09-18T10:19:54.661350+00:00",
+    "execution_environment": {}
+  },
+  "total_evaluations": 8,
+  "results": [
+    {
+      "model_name": "mock-wav2vec2",
+      "model_version": "v1.2.0-mock",
+      "dataset": "calibrated_reference",
+      "condition": "clean",
+      "generator": "synthetic_speech_simulation",
+      "noise_type": null,
+      "codec": null,
+      "sample_duration_seconds": 2.0,
+      "sample_count": 8,
+      "metrics": {
+        "sample_count": 8,
+        "positive_count": 4,
+        "negative_count": 4,
+        "threshold": 50.0,
+        "tp": 4,
+        "fp": 0,
+        "tn": 4,
+        "fn": 0,
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "fpr": 0.0,
+        "fnr": 0.0,
+        "roc_auc": 1.0,
+        "eer_percent": 0.0,
+        "eer_threshold": 32.5
+      },
+      "latency": {
+        "p50_ms": 0.46,
+        "p95_ms": 2.92,
+        "mean_ms": 0.96,
+        "device": "cpu"
+      }
+    },
+    {
+      "model_name": "mock-wav2vec2",
+      "model_version": "v1.2.0-mock",
+      "dataset": "calibrated_reference",
+      "condition": "noise_awgn_10db",
+      "generator": "synthetic_speech_simulation",
+      "noise_type": "AWGN",
+      "codec": null,
+      "sample_duration_seconds": 2.0,
+      "sample_count": 8,
+      "metrics": {
+        "sample_count": 8,
+        "positive_count": 4,
+        "negative_count": 4,
+        "threshold": 50.0,
+        "tp": 4,
+        "fp": 4,
+        "tn": 0,
+        "fn": 0,
+        "accuracy": 0.5,
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1_score": 0.6667,
+        "fpr": 1.0,
+        "fnr": 0.0,
+        "roc_auc": 1.0,
+        "eer_percent": 0.0,
+        "eer_threshold": 55.97
+      },
+      "latency": {
+        "p50_ms": 1.43,
+        "p95_ms": 2.14,
+        "mean_ms": 1.57,
+        "device": "cpu"
+      }
+    },
+    {
+      "model_name": "mock-wav2vec2",
+      "model_version": "v1.2.0-mock",
+      "dataset": "calibrated_reference",
+      "condition": "telephony_bandpass_300_3400hz",
+      "generator": "synthetic_speech_simulation",
+      "noise_type": null,
+      "codec": "Bandpass 300-3400Hz",
+      "sample_duration_seconds": 2.0,
+      "sample_count": 8,
+      "metrics": {
+        "sample_count": 8,
+        "positive_count": 4,
+        "negative_count": 4,
+        "threshold": 50.0,
+        "tp": 0,
+        "fp": 0,
+        "tn": 4,
+        "fn": 4,
+        "accuracy": 0.5,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1_score": 0.0,
+        "fpr": 0.0,
+        "fnr": 1.0,
+        "roc_auc": 1.0,
+        "eer_percent": 0.0,
+        "eer_threshold": 6.05
+      },
+      "latency": {
+        "p50_ms": 1.27,
+        "p95_ms": 5.4,
+        "mean_ms": 2.1,
+        "device": "cpu"
+      }
+    },
+    {
+      "model_name": "mock-wav2vec2",
+      "model_version": "v1.2.0-mock",
+      "dataset": "calibrated_reference",
+      "condition": "codec_g711_mulaw",
+      "generator": "synthetic_speech_simulation",
+      "noise_type": null,
+      "codec": "G.711",
+      "sample_duration_seconds": 2.0,
+      "sample_count": 8,
+      "metrics": {
+        "sample_count": 8,
+        "positive_count": 4,
+        "negative_count": 4,
+        "threshold": 50.0,
+        "tp": 4,
+        "fp": 0,
+        "tn": 4,
+        "fn": 0,
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "fpr": 0.0,
+        "fnr": 0.0,
+        "roc_auc": 1.0,
+        "eer_percent": 0.0,
+        "eer_threshold": 33.74
+      },
+      "latency": {
+        "p50_ms": 1.45,
+        "p95_ms": 1.95,
+        "mean_ms": 1.56,
+        "device": "cpu"
+      }
+    },
+    {
+      "model_name": "mock-wav2vec2",
+      "model_version": "v1.2.0-mock",
+      "dataset": "calibrated_reference",
+      "condition": "clipping_saturated",
+      "generator": "synthetic_speech_simulation",
+      "noise_type": null,
+      "codec": null,
+      "sample_duration_seconds": 2.0,
+      "sample_count": 8,
+      "metrics": {
+        "sample_count": 8,
+        "positive_count": 4,
+        "negative_count": 4,
+        "threshold": 50.0,
+        "tp": 4,
+        "fp": 0,
+        "tn": 4,
+        "fn": 0,
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "fpr": 0.0,
+        "fnr": 0.0,
+        "roc_auc": 1.0,
+        "eer_percent": 0.0,
+        "eer_threshold": 34.0
+      },
+      "latency": {
+        "p50_ms": 0.39,
+        "p95_ms": 0.67,
+        "mean_ms": 0.45,
+        "device": "cpu"
+      }
+    },
+    {
+      "model_name": "mock-wav2vec2",
+      "model_version": "v1.2.0-mock",
+      "dataset": "calibrated_reference",
+      "condition": "short_audio_0_5s",
+      "generator": "synthetic_speech_simulation",
+      "noise_type": null,
+      "codec": null,
+      "sample_duration_seconds": 2.0,
+      "sample_count": 8,
+      "metrics": {
+        "sample_count": 8,
+        "positive_count": 4,
+        "negative_count": 4,
+        "threshold": 50.0,
+        "tp": 4,
+        "fp": 0,
+        "tn": 4,
+        "fn": 0,
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "fpr": 0.0,
+        "fnr": 0.0,
+        "roc_auc": 1.0,
+        "eer_percent": 0.0,
+        "eer_threshold": 21.51
+      },
+      "latency": {
+        "p50_ms": 0.11,
+        "p95_ms": 0.16,
+        "mean_ms": 0.12,
+        "device": "cpu"
+      }
+    },
+    {
+      "model_name": "mock-wav2vec2",
+      "model_version": "v1.2.0-mock",
+      "dataset": "wavefake",
+      "condition": "clean",
+      "generator": "unseen_neural_vocoders",
+      "noise_type": null,
+      "codec": null,
+      "sample_duration_seconds": 2.0,
+      "sample_count": 0,
+      "metrics": {
+        "accuracy": "NOT EVALUATED (Local dataset files not found)",
+        "f1_score": "NOT EVALUATED",
+        "roc_auc": "NOT EVALUATED",
+        "eer_percent": "NOT EVALUATED"
+      },
+      "latency": {
+        "p50_ms": "N/A",
+        "p95_ms": "N/A"
+      }
+    },
+    {
+      "model_name": "mock-wav2vec2",
+      "model_version": "v1.2.0-mock",
+      "dataset": "asvspoof2019_la",
+      "condition": "clean",
+      "generator": "asvspoof_attacks",
+      "noise_type": null,
+      "codec": null,
+      "sample_duration_seconds": 2.0,
+      "sample_count": 0,
+      "metrics": {
+        "accuracy": "NOT EVALUATED (Local dataset files not found)",
+        "f1_score": "NOT EVALUATED",
+        "roc_auc": "NOT EVALUATED",
+        "eer_percent": "NOT EVALUATED"
+      },
+      "latency": {
+        "p50_ms": "N/A",
+        "p95_ms": "N/A"
+      }
+    }
+  ]
+}

@@ -33,7 +33,7 @@ class SpeakerVerifier(ABC):
         audio: np.ndarray,
         enrolled_embedding: Optional[np.ndarray],
         sample_rate: int = 16000,
-        threshold: float = 0.75,
+        threshold: Optional[float] = None,
     ) -> VerificationResult:
         """
         Extract live embedding and compute normalized geometric similarity against enrolled profile.

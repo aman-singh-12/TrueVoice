@@ -102,6 +102,10 @@ async def websocket_audio_stream(
 
             if "bytes" in message and message["bytes"]:
                 raw_chunk = message["bytes"]
+                if len(raw_chunk) > 65536:
+                    logger.warning(f"Rejecting oversized audio frame ({len(raw_chunk)} bytes) for session {session_id}")
+                    await websocket.close(code=status.WS_1009_MESSAGE_TOO_BIG, reason="Audio frame exceeds 64KB limit")
+                    return
                 
                 # Ingest chunk & evaluate if hop is ready
                 async with async_session_factory() as db:

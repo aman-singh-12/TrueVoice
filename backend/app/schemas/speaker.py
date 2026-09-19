@@ -43,12 +43,21 @@ class VoiceprintResponse(BaseModel):
 
 
 class VerificationResult(BaseModel):
-    """Standardized output contract for speaker verification."""
-    verified: Optional[bool] = None  # None if unverified/unenrolled
-    similarity: float = Field(..., ge=0.0, le=1.0, description="Normalized geometric similarity [0.0, 1.0]")
-    threshold: float = Field(..., ge=0.0, le=1.0, description="Configured verification threshold")
-    confidence: Optional[float] = Field(None, ge=0.0, le=1.0)
+    """
+    Standardized output contract for speaker verification.
+    Represents the mathematical evaluation of live audio against an enrolled 192-d centroid.
+    """
+    verified: Optional[bool] = None  # None if unverified/unenrolled or model unavailable
+    similarity: Optional[float] = Field(None, ge=0.0, le=1.0, description="Normalized geometric similarity [0.0, 1.0]")
+    threshold: float = Field(0.75, ge=0.0, le=1.0, description="Configured verification threshold operating point")
+    confidence: Optional[float] = Field(None, ge=0.0, le=1.0, description="Confidence score for biometric prediction")
     signal_availability: SignalAvailability = SignalAvailability.AVAILABLE
-    model_name: str
-    model_version: str
-    inference_time_ms: float
+    model_name: str = "ecapa-tdnn"
+    model_version: str = "speechbrain-ecapa-voxceleb"
+    inference_time_ms: float = 0.0
+    distance: Optional[float] = None
+    is_match: Optional[bool] = None
+
+
+# Explicit alias matching architectural nomenclature
+SpeakerVerificationResult = VerificationResult

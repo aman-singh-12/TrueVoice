@@ -28,9 +28,12 @@ pytest>=8.0.0
 pytest-asyncio>=0.23.0
 httpx>=0.27.0
 
-# Optional Live ML Dependencies (Uncomment in production GPU environments)
-# torch>=2.2.0
-# torchaudio>=2.2.0
-# transformers>=4.38.0
-# faster-whisper>=1.0.0
-# speechbrain>=0.5.16
+# Production ML Dependencies (all ML models: deepfake detection + speaker verification + ASR)
+# Install when running in production live mode (TRUEVOICE_ML_MODE=live):
+# pip install -e ".[ml]"  or  pip install torch>=2.2.0 torchaudio>=2.2.0 transformers>=4.38.0 speechbrain>=1.0.0 faster-whisper>=1.0.0 huggingface-hub>=0.21.0
+torch>=2.2.0; extra == "ml"
+torchaudio>=2.2.0; extra == "ml"
+transformers>=4.38.0; extra == "ml"
+speechbrain>=1.0.0; extra == "ml"
+faster-whisper>=1.0.0; extra == "ml"
+huggingface-hub>=0.21.0; extra == "ml"
