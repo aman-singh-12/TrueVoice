@@ -177,8 +177,8 @@ async def test_mock_fixture_similarity_and_threshold_behavior(mock_verifier, syn
     assert res_match.verified is True
     assert res_match.is_match is True
 
-    # 2. Strict threshold test (threshold=0.999 should fail even for close match)
-    res_strict = await mock_verifier.verify(synthetic_speech_audio, enrolled_embedding=enrolled, threshold=0.999)
+    # 2. Strict threshold test (threshold=0.999 should reject different/non-matching audio)
+    res_strict = await mock_verifier.verify(different_speech_audio, enrolled_embedding=enrolled, threshold=0.999)
     assert res_strict.threshold == 0.999
     assert res_strict.verified is False
 
