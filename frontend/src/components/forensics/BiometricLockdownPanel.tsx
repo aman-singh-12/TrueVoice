@@ -176,12 +176,12 @@ export const BiometricLockdownPanel: React.FC<BiometricLockdownPanelProps> = ({
                       : 'bg-[#F9F9F7] border-[#EAEAE5] text-[#71717A]'
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs font-semibold text-[#18181B] truncate">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="text-xs font-semibold text-[#18181B] truncate flex-1 min-w-0" title={action.actionName}>
                       {action.actionName}
                     </span>
                     <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase flex-shrink-0 ${
                         isLocked
                           ? 'bg-[#FFE4E6] text-[#BE123C] border border-[#FECDD3]'
                           : isPending
