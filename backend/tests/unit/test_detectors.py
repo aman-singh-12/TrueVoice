@@ -20,8 +20,10 @@ import asyncio
 from unittest.mock import MagicMock
 import numpy as np
 import pytest
-import torch
-import torch.nn as nn
+
+# Skip this entire module when torch is not installed (mock-mode / CI without GPU deps)
+torch = pytest.importorskip("torch", reason="torch not installed; skipping detector ML tests")
+nn = torch.nn
 
 from app.core.constants import SignalAvailability
 from app.detectors.aasist.detector import AASISTDetector

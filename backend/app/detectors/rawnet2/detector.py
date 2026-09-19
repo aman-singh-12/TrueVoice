@@ -15,7 +15,6 @@ from app.core.constants import SignalAvailability
 from app.core.logging import logger
 from app.detectors.base import DeepfakeDetector
 from app.detectors.config import DetectorConfig
-from app.detectors.rawnet2.model import RawNet2Model
 from app.schemas.detection import DeepfakeResult
 
 
@@ -28,7 +27,7 @@ class RawNet2Detector(DeepfakeDetector):
     def __init__(self, model_version: str = "rawnet2-v1.0-canonical"):
         self.model_version = model_version
         self.model_name = "rawnet2"
-        self.model: Optional[RawNet2Model] = None
+        self.model = None  # RawNet2Model loaded lazily
         self.device = "cpu"
         self.is_loaded = False
         self.checkpoint_path: Optional[str] = None
@@ -44,6 +43,7 @@ class RawNet2Detector(DeepfakeDetector):
 
         try:
             import torch
+            from app.detectors.rawnet2.model import RawNet2Model
 
             # Instantiate canonical model architecture
             model = RawNet2Model()

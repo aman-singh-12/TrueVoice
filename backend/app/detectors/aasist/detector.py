@@ -13,7 +13,6 @@ import numpy as np
 
 from app.core.constants import SignalAvailability
 from app.core.logging import logger
-from app.detectors.aasist.model import AASISTModel
 from app.detectors.base import DeepfakeDetector
 from app.detectors.config import DetectorConfig
 from app.schemas.detection import DeepfakeResult
@@ -28,7 +27,7 @@ class AASISTDetector(DeepfakeDetector):
     def __init__(self, model_version: str = "aasist-l-v1.0"):
         self.model_version = model_version
         self.model_name = "aasist"
-        self.model: Optional[AASISTModel] = None
+        self.model = None  # AASISTModel loaded lazily
         self.device = "cpu"
         self.is_loaded = False
         self.checkpoint_path: Optional[str] = None
@@ -44,6 +43,7 @@ class AASISTDetector(DeepfakeDetector):
 
         try:
             import torch
+            from app.detectors.aasist.model import AASISTModel
 
             model = AASISTModel()
 

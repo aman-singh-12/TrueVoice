@@ -9,10 +9,6 @@ from app.config import settings
 from app.core.logging import logger
 from app.detectors.base import DeepfakeDetector
 from app.detectors.mock import MockDeepfakeDetector
-from app.detectors.wav2vec2.detector import Wav2Vec2Detector
-from app.detectors.rawnet2.detector import RawNet2Detector
-from app.detectors.aasist.detector import AASISTDetector
-from app.detectors.ensemble.detector import EnsembleDetector
 from app.detectors.config import DetectorConfig
 
 
@@ -51,12 +47,16 @@ class DetectorRegistry:
         if mode == "mock" or primary_name == "mock":
             self._active_detector = MockDeepfakeDetector()
         elif primary_name == "wav2vec2":
+            from app.detectors.wav2vec2.detector import Wav2Vec2Detector
             self._active_detector = Wav2Vec2Detector()
         elif primary_name == "rawnet2":
+            from app.detectors.rawnet2.detector import RawNet2Detector
             self._active_detector = RawNet2Detector()
         elif primary_name == "aasist":
+            from app.detectors.aasist.detector import AASISTDetector
             self._active_detector = AASISTDetector()
         elif primary_name == "ensemble":
+            from app.detectors.ensemble.detector import EnsembleDetector
             self._active_detector = EnsembleDetector()
         else:
             logger.warning(f"Unknown detector '{primary_name}', falling back to MockDeepfakeDetector")
