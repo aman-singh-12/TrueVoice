@@ -4,6 +4,7 @@ Reports operational status, loaded ML model status, and database connectivity.
 """
 
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
@@ -48,3 +49,34 @@ async def health_check(db: AsyncSession = Depends(get_db)):
             "target_processing_latency_ms": 120,
         },
     }
+
+
+@router.get("/ready", status_code=status.HTTP_200_OK)
+@router.get("/v1/ready", status_code=status.HTTP_200_OK)
+async def readiness_probe(db: AsyncSession = Depends(get_db)):
+    """Deep readiness probe for load balancers and container orchestrators."""
+    settings = get_settings()
+    errors = []
+
+    # 1. Probe database
+    try:
+        await db.execute(text("SELECT 1"))
+    except Exception as ex:
+        errors.append(f"Database error: {str(ex)}")
+
+    # 2. Probe primary model initialization
+    try:
+        registry = DetectorRegistry.get_registry()
+        detector = registry.initialize_primary_detector()
+        if not detector:
+            errors.append("Primary detector not loaded")
+    except Exception as ex:
+        errors.append(f"Detector error: {str(ex)}")
+
+    if errors:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"ready": False, "errors": errors, "version": settings.VERSION}
+        )
+
+    return {"ready": True, "service": "TrueVoice Backend", "version": settings.VERSION}
