@@ -4,8 +4,6 @@ __pycache__/
 *$py.class
 
 # Virtual environments & local env
-.env
-.env.*
 !.env.example
 .venv
 env/
@@ -23,3 +21,5 @@ htmlcov/
 # OS files
 .DS_Store
 Thumbs.db
+config.bat
+node_modules

@@ -1,224 +1,219 @@
-# TrueVoice Frontend UI/UX Audit (Pre-Redesign)
+# TrueVoice Frontend UI/UX Comprehensive Audit
 
-Date: 2026-09-19  
-Scope: Entire `frontend/` application. No backend algorithms, models, risk formula, policy engine, trust state machine, audit hashing, schema, or migrations were changed for this audit.
-
----
-
-## 1. Current information architecture
-
-The product is a **single-page tab switcher**, not a routed application.
-
-**Mental model today:** “Forensics console with demo scenarios,” not “real-time voice security platform.”
-
-| Area | What the UI actually is |
-|---|---|
-| Primary workspace | Forensics Console: file dropzone + three canned scenarios + dense 3-column investigation board |
-| Live monitoring | A toolbar (`AudioStreamController`) **above every tab**, not a dedicated destination |
-| Sessions | “Incident Sessions” table mixing mock rows with backend sessions (plus invented biometric/hash fields) |
-| Speakers | “Biometrics Vault” with mock executives and synthetic enrollment audio |
-| Audit | Mock Merkle-style ledger unless a live session ID exists |
-| Policy | Threshold sliders presented as a first-class nav item |
-| Auth | Modal overlay with “real login” **and** persona simulation |
-
-There is **no Overview**. Health, alerts, and “what needs attention” are not first-class.
-
-The live WebSocket pipeline (session → ticket → PCM → telemetry) is real, but it is **visually subordinated** to mock forensics (speedometer, waveform, fake SHA-256, Unsplash avatars).
+**Date:** 2026-09-19  
+**Product:** TrueVoice — Real-Time Voice Security & Trust Platform  
+**Target Audience:** Final Smart India Hackathon (SIH) Jury & Enterprise SOC Operators  
+**Scope:** Complete frontend architecture, styling, components, views, navigation, accessibility, and real data verification.  
+**Constraint Verification:** Backend source of truth preserved (zero changes to models, risk formulas, policy weights, ML pipelines, database schema, or migrations).
 
 ---
 
-## 2. Current routes
+### 1. Current Information Architecture
 
-There is **no router** (`react-router` is not installed). `main.tsx` mounts `App` only.
+The current frontend is in a transitional state: an initial hash router (`#/overview`, `#/monitor`, `#/sessions`, `#/incidents`, `#/verification`, `#/audit`, `#/settings`, `#/help`) was introduced in `App.tsx`, wrapped in an `AppShell.tsx`, but the internal views and underlying design tokens still suffer from severe fragmentation, dead legacy code, and weak visual prioritization:
 
-| Mechanism | Destinations |
-|---|---|
-| React `activeTab` state | `console` \| `sessions` \| `speakers` \| `audit` \| `policies` |
-| URL | Always `/` (hash unused) |
-| Deep links | None — refresh returns to Forensics Console |
-| Auth route | None — app is usable without JWT; login is optional modal |
-
-Backend API paths the client already knows (`/v1/auth/login`, `/v1/sessions`, `/v1/stream/{id}`, `/v1/risk/{id}/*`, `/v1/verification/*`, `/v1/audit/{id}/*`, `/v1/speakers`, `/v1/policies`, `/health`) are **not mirrored in the UI structure**.
-
----
-
-## 3. Current navigation
-
-`Header.tsx` is a **sticky top bar** containing:
-
-1. Brand + always-on “File Ingestion (Active)” chip (incorrect when live WS is running)
-2. Five equal-weight tabs (Forensics, Incident Sessions, Biometrics Vault, Audit Ledger, Policy Tuning)
-3. **Scenario presets** with hardcoded scores: Escrow Attack (88%), Authentic (12%), Borderline (54%)
-4. Persona pill that opens AuthModal
-
-Problems:
-
-- Every feature is primary navigation.
-- Demo scenario switches sit next to product identity.
-- No Overview, no Live Monitor item, no Settings/Help grouping.
-- Active tab styling is subtle (white pill on warm gray).
-- No keyboard landmarks (`nav` exists, but tabs are unlabeled for screen readers; no `aria-current`).
-- Stream controls persist on **all** pages, crowding every destination.
-
-Duplicate headers exist (`components/Header.tsx` vs `components/common/Header.tsx`). Unused SOC CSS (`App.css`) and unused `LoginModal` compete with the warm Tailwind shell.
+- **Overview Dashboard (`OverviewView.tsx`)**: Displays 3 top metric cards (System Health, Monitoring status, Alerts count), a two-column middle section with "Current risk" (empty placeholder when idle) and "Needs attention", and a bottom two-column section with "Recent sessions" and "System status". It fails to provide a cohesive SOC "Mission Control" feel and leaves vast empty gaps when no live call is streaming.
+- **Live Monitor (`LiveMonitorView.tsx`)**: The core product screen. Currently presents a crowded, vertically-stacked arrangement of bordered white cards: Session Info bar, Risk Gauge, Trust State, Security Action, Signal Radar (Risk factors), Risk over time SVG graph, Conversation Intelligence (detected intents & collapsible transcript), and Analyst Controls with an expandable override form. The visual hierarchy is flat: all cards have identical white backgrounds and thin borders with no dominant focal point.
+- **Sessions & Incidents (`SessionsView.tsx`)**: Reused for both general session history (`/sessions`) and incident triage (`/incidents`). It presents a generic data table with basic dropdown filters. When filtered for incidents, it only filters trust states without providing an incident-specific triage workflow.
+- **Investigation Detail (`InvestigateView.tsx`)**: Shared for both single sessions (`/sessions/:id`) and incidents (`/incidents/:id`). Dumps 4 metadata blocks, a plain timeline list, a signal radar, a text blurb for conversation intelligence, and an audit log with raw JSON stringified blocks.
+- **Verification Workflow (`VerificationView.tsx`)**: An underdeveloped 50-line stub that merely displays the current security action title and directs users to a floating `ChallengeModal` dialog. There is no focused, multi-step verification console.
+- **Audit Trail (`AuditView.tsx`)**: Dropdown session picker with a "Verify chain" button and a table that dumps raw JSON payloads on row expansion. Lacks tamper-evident visual verification badges and cryptographic proof formatting.
+- **Settings & Policy (`SettingsView.tsx`)**: Developer-centric forms for editing threshold numbers and uploading speaker audio without SOC guardrails or guidance.
+- **Authentication (`LoginView.tsx`)**: Standalone full-page login with basic email/password fields.
+- **Dead Legacy Code**: A 1,124-line `App.css` file with legacy dark classes, duplicate headers (`components/Header.tsx`, `components/common/Header.tsx`), unreferenced views (`ForensicsConsoleView.tsx`, `AuditLedgerView.tsx`, `VoiceBiometricsVaultView.tsx`, `IncidentSessionsView.tsx`, `PolicyTuningView.tsx`, `AuthModal.tsx`), and an unreferenced 25KB `mockScenarios.ts` file remain in the codebase.
 
 ---
 
-## 4. Current user journeys
+### 2. Current Routes
 
-### Intended (product)
+The active routing uses window hash navigation via `src/hooks/useHashRoute.ts` and `src/lib/routing.ts`:
 
-LOGIN → OVERVIEW → CREATE/SELECT SESSION → LIVE MONITORING → RISK DETECTED → INVESTIGATE → VERIFY → INCIDENT/HISTORY → AUDIT
-
-### Actual (today)
-
-1. Open app (already “in” without login).
-2. Land on **Forensics Console** with **Attack scenario already loaded** (risk 88.4, critical copy).
-3. Optionally switch canned scenarios in the header.
-4. Optionally start a real session from the dark SOC toolbar (visually disconnected from the warm console).
-5. Live telemetry is **mapped into the mock ForensicCallScenario**, including `Math.random()` forensic hashes and Unsplash avatars.
-6. File upload invents scores (68.2 VERIFY) without backend analysis.
-7. “Inspect session” maps backend rows back onto **canned scenarios**, not session detail APIs.
-8. Verification exists (`ChallengeModal`) but close currently re-dispatches a challenge.
-9. Audit/policy/speakers can show backend data **or silently fall back to mocks**.
-
-The jury journey is: “click red scenario → look at busy dashboard,” not “monitor a live voice session.”
+| Route Hash | View Component | Status & Role |
+|---|---|---|
+| `#/overview` | `OverviewView` | Primary landing dashboard. Shows system health & active alerts. |
+| `#/monitor` | `LiveMonitorView` | Core live streaming & telemetry monitoring console. |
+| `#/sessions` | `SessionsView` | Tabular list of all historical and active voice sessions. |
+| `#/sessions/:id` | `InvestigateView` (variant='session') | Detailed deep-dive for a specific session ID. |
+| `#/incidents` | `SessionsView` (incidentOnly=true) | Filtered view of sessions in non-trusted trust states. |
+| `#/incidents/:id` | `InvestigateView` (variant='incident') | Deep-dive incident analysis. |
+| `#/verification` | `VerificationView` | Secondary verification view (currently an incomplete stub). |
+| `#/audit` | `AuditView` | Cryptographic audit ledger with session selector. |
+| `#/audit/:id` | `AuditView` | Audit ledger pre-selected to specific session ID. |
+| `#/settings` | `SettingsView` | Policy threshold configuration & voiceprint biometrics enrollment. |
+| `#/help` | `HelpView` | Static product documentation and user guide. |
 
 ---
 
-## 5. UI problems
+### 3. Current Navigation
 
-- Warm cream/terracotta “consumer” palette vs leftover dark SOC CSS — two products in one.
-- Information hierarchy is flat: banners, dropzones, scenario chips, speedometer, waveform, transcript, lockdown panel all compete.
-- Excessive borders, rounded-2xl cards nested in cards.
-- All-caps mono labels, emoji in titles (`🎙️ LIVE INGESTION`), marketing copy (“Zero-Trust Forensic Enclave”).
-- Risk shown as verbose strings (`Current Risk Score: 72.000000` pattern in live mapping; high precision, low scanability).
-- File ingestion dropzone occupies the top of the “most important” screen.
-- Footer claims “Encrypted Cluster Node: US-East-1A” with no backend source.
-- Inconsistent type scale (10px–18px mixed without a system).
-- Icons duplicated as inline SVGs instead of a component set (`lucide-react` is installed but barely used in the shell).
+The navigation is managed in `src/layout/AppShell.tsx`:
+- **Sidebar**: Fixed dark sidebar (`bg-slate-950`) with three grouped sections:
+  - `Monitor`: Overview (`LayoutDashboard`), Live Monitor (`Radio`)
+  - `Investigate`: Sessions (`Activity`), Incidents (`ShieldAlert`)
+  - `Security`: Verification (`ShieldCheck`), Audit (`ScrollText`)
+  - Footer items: Settings (`Settings`), Help (`HelpCircle`)
+- **Top Header Bar**: Sticky white bar (`bg-white/90`) containing mobile hamburger toggle, global session search input, live connection status dot, Alerts pill button with badge counter, user role badge, and Sign Out button.
 
----
-
-## 6. UX problems
-
-- No guided flow; presenter must know to start the mic toolbar.
-- Scenario toggles **override** live understanding of the system.
-- Sessions list invents biometric match 92% / MATCH and random hashes when mapping API data.
-- Clicking a session loads a **demo scenario**, not `GET /v1/sessions/{id}` + timeline.
-- Policy Tuning is a top-level “admin CRUD” page.
-- Auth allows skipping real login via persona simulation.
-- Errors are raw (`Failed to initiate session: ...`) in a tiny banner.
-- Close on ChallengeModal calls `dispatchVerification()` (new challenge) instead of dismissing.
-- File upload claims analysis that never hits the backend.
-- Speaker enrollment generates a **synthetic sine-wave WAV**.
+**Navigation Shortcomings:**
+1. Active nav items are barely differentiated (just `bg-white/10 text-white`).
+2. No breadcrumb navigation when drilling down into `#/sessions/:id` or `#/incidents/:id`.
+3. Search bar submits form and navigates to `#/sessions?q=...` abruptly with no quick search dropdown.
+4. Alerts button routes to `#/incidents`, but doesn't indicate whether alerts are new or critical.
+5. No quick-switch or status pill in header to jump directly into the active live session if the user navigates away to Audit or Sessions during an active call.
 
 ---
 
-## 7. Accessibility problems
+### 4. Current User Journeys
 
-- Color-only cues on scenario dots and biometric match dots.
-- Many buttons lack accessible names (icon-only close buttons inconsistently labeled).
-- Modals: no focus trap, no `role="dialog"`, no `aria-modal`, no restore-focus.
-- Auth persona rows are clickable `div`s, not buttons.
-- Contrast: terracotta on white is acceptable; 10px `#A1A1AA` metadata is weak.
-- Pulse/ping animations on brand mark and “live” chips with no `prefers-reduced-motion`.
-- Tables: sessions table is mouse-row-click without keyboard row activation.
-- Form labels exist in some places; stream ANI is labeled. Challenge input is labeled.
-- Skip link / main landmark: `<main>` exists; sidebar/nav structure does not.
-
----
-
-## 8. Responsive problems
-
-- Header stacks poorly: brand + five tabs + three scenarios + persona overflow on laptop widths.
-- `xl:flex-row` still cramped at 1280px.
-- Forensics 12-column grid collapses to a long vertical scroll of equal-weight cards.
-- Sessions table forces horizontal scroll; many columns (including invented ones).
-- Stream controller uses `App.css` dark theme that does not share Tailwind breakpoints.
-- No dedicated mobile nav; tabs wrap into a second row.
-- Drawers (`max-w-xl`) OK on tablet; backdrop click-to-close missing.
-
----
-
-## 9. Component duplication
-
-| Concern | Copies |
-|---|---|
-| Header | `Header.tsx`, `common/Header.tsx` |
-| Login | `LoginModal.tsx`, `AuthModal.tsx` |
-| Risk visualization | `RiskGauge.tsx`, `forensics/RiskSpeedometer.tsx` |
-| Transcript | `ThreatBadges.tsx` snippet, `forensics/TranscriptPanel.tsx` |
-| Audit | `AuditViewer.tsx` (real API), `AuditLedgerView.tsx` (mock-first) |
-| Status | `StatusBadge.tsx` (includes non-backend tiers CAUTION/VERIFY) |
-| Buttons | Tailwind one-offs vs `.btn` in `App.css` |
-| Types | UI `types/index.ts` (demo) vs `types/api.ts` + `types/telemetry.ts` (contract) |
-
----
-
-## 10. Visual consistency problems
-
-- Light warm Inter UI vs dark cyan SOC toolbar/modals.
-- Risk colors: terracotta everywhere vs semantic green/amber/red in gauges.
-- Radius: 2xl vs 6–10px SOC.
-- Typography: Inter vs system stack in `App.css`.
-- Shadows: `shadow-soft` vs heavy black SOC shadows.
-- “Enterprise v2.4” badge is decorative versioning.
-
----
-
-## 11. Dashboard information overload
-
-The Forensics Console simultaneously shows:
-
-1. Dual-channel file ingestion dropzone and pipeline marketing copy  
-2. Upload toast claiming Mel spectrograms / ECAPA  
-3. Active investigation title  
-4. Three scenario buttons (again)  
-5. Risk speedometer + compounding multiplier + five weighted factors  
-6. Fake waveform player + codec/sample-rate metadata  
-7. Full transcript panel  
-8. Biometric lockdown panel (avatar, hash, locked treasury actions)  
-9. Persistent stream toolbar (ANI, VU meter, challenge, override, audit)  
-10. Header scenario presets  
-11. Footer cluster claims  
-
-Live risk is easy to miss. Nothing answers calmly: “Is the system healthy? Are we monitoring? What needs attention?”
-
----
-
-## 12. Recommended new information architecture
-
-**Product framing:** Real-Time Voice Security & Trust Platform.
-
-**Application shell:** persistent dark sidebar + light canvas + compact top bar (search, alerts, user).
-
+#### Intended Enterprise SOC Journey:
 ```
-LOGIN (full page, required)
-  └── APP SHELL
-        MONITOR
-          Overview      #/overview
-          Live Monitor  #/monitor     ← flagship
-        INVESTIGATE
-          Sessions      #/sessions
-          Session       #/sessions/:id
-          Incidents     #/incidents
-          Incident      #/incidents/:id
-        SECURITY
-          Verification  #/verification
-          Audit         #/audit
-        SYSTEM
-          Settings      #/settings    (policy + voiceprints)
-          Help          #/help
+LOGIN
+  ↓
+OVERVIEW (System Health, Active Streams, Incident Count)
+  ↓
+CREATE / SELECT SESSION (Enter Caller ANI or select active queue)
+  ↓
+LIVE MONITORING (Real-time risk scoring, spectral/biometric signals)
+  ↓
+RISK DETECTED (Visual elevation to HIGH/CRITICAL, action triggered)
+  ↓
+INVESTIGATE (Inspect factor breakdowns, intent keywords, voiceprint match)
+  ↓
+VERIFY / TAKE ACTION (Dispatch OOB Challenge / Analyst Override)
+  ↓
+INCIDENT / HISTORY (Logged session in incident repository)
+  ↓
+AUDIT (Tamper-evident SHA-256 hash chain verification)
 ```
 
-**Primary nav only:** Overview, Live Monitor, Sessions, Incidents, Verification, Audit.  
-**Secondary:** Settings, Help.
+#### Actual Observed Flaws in Journey:
+- **No Guided Handoff**: If high risk occurs on `LiveMonitorView`, the analyst sees "Verification required", but clicking verification triggers a floating modal or navigates to `/verification` where the state is disconnected.
+- **Drilldown Dead Ends**: Navigating from Live Monitor to "Open investigation" leaves the live stream running in background with no visible banner to return.
+- **Incident vs Session Confusion**: Incidents view is merely the session list with a pre-applied filter; there is no triage or investigation lifecycle (e.g., status tags like Under Review, Contained, Closed).
+- **Audit Disconnection**: In `InvestigateView`, audit entries show raw JSON blocks without a direct link to the full ledger verification screen.
 
-**Data rule:** Backend is source of truth. Unavailable → “Unavailable”. No canned scenarios, no persona RBAC, no invented hashes/scores on production paths.
+---
 
-**Live Monitor hierarchy:** session/status → large risk + tier → trust + security action → compact factor bars → collapsible conversation → analyst controls.
+### 5. UI Problems
 
-**Overview hierarchy:** health / active sessions / alerts → risk snapshot → recent events → recent sessions/incidents / model-health (from `/health` only).
+1. **Weak Visual Hierarchy**:
+   - Every card on the dashboard and live monitor uses the same flat white background, 1px border (`border-line`), and rounded corners.
+   - The Risk Score does not command immediate authority. The SVG arc gauge has a thin stroke, muted tick marks, and lacks strong contrast.
+2. **Cluttered Information Density**:
+   - The Live Monitor packs 7 separate panels onto one screen without clear grouping or primary/secondary visual zones.
+   - Conversation intelligence and transcript snippets occupy equal visual weight with primary biometric deepfake signals.
+3. **Inconsistent Component Styling**:
+   - Some components use dark slate classes, others use warm beige/gray tokens, and others use tailwind slate.
+   - Text sizes range randomly from `text-[11px]` to `text-5xl` without adhering to a disciplined typography hierarchy.
+4. **Unformatted Raw Payloads**:
+   - Audit logs and evidence provenance display raw JSON strings (`JSON.stringify(payload, null, 2)`) inside `<pre>` tags, looking like an unfinished developer debug tool.
+5. **No Dynamic Visual Elevation on Threat**:
+   - When risk reaches CRITICAL (e.g. 88+), only a small badge changes color; the rest of the UI remains calm and static, failing to convey urgent operational risk to an SOC operator.
 
-This IA is the implementation target for the redesign that follows this audit.
+---
+
+### 6. UX Problems
+
+1. **Disjointed Verification Workflow**:
+   - `ChallengeModal.tsx` opens as a popup, but `VerificationView.tsx` exists as a separate route that does nothing but display a static paragraph.
+   - When an out-of-band verification challenge is dispatched, the timer countdown is small and lacks clear state progression (Dispatched → Waiting for Response → Verifying Nonce Signature → Confirmed by Backend).
+2. **Missing In-Flight Session Persistent Indicator**:
+   - When monitoring is active and the user clicks on Sessions or Audit, the header merely displays a tiny green dot labeled "Monitoring" without a persistent floating control bar to mute, view live score, or return to monitor.
+3. **Table Usability & Search**:
+   - Search input only operates on the Enter key and redirects to a full page query reload.
+   - Sorting in tables requires clicking plain column headers with no clear sort indicator icons (▲/▼).
+4. **Analyst Override Friction**:
+   - The override panel opens as an unstyled sub-panel with three small buttons ("Approve", "Restrict", "Block") and an unstructured text input for reason.
+
+---
+
+### 7. Accessibility Problems
+
+1. **Color-Dependent State Communication**:
+   - Risk tiers rely heavily on background tint (`bg-emerald-50`, `bg-amber-50`, `bg-orange-50`, `bg-rose-50`), which has low contrast in bright ambient environments and is difficult for color-blind users.
+2. **Missing ARIA Live Regions**:
+   - Real-time risk telemetry broadcasts arrive 2 times per second over WebSocket, but there is no `aria-live="polite"` or `aria-atomic="true"` container for assistive technology.
+3. **Form & Dialog Accessibility**:
+   - Several inputs lack explicit `<label>` connections (`htmlFor` mismatches).
+   - Modal dialogs lack keyboard focus trapping (`Tab` escapes out of modal into background).
+   - Missing `aria-expanded` and `aria-controls` on expandable table rows.
+
+---
+
+### 8. Responsive Problems
+
+1. **Table Overflow on Laptops & Tablets**:
+   - Sessions and Audit tables have fixed `min-w-[720px]` and `min-w-[800px]`, forcing horizontal scroll bars on typical 13-inch laptop displays (1280x800) and tablets.
+2. **Grid Collapse Disasters**:
+   - The `lg:grid-cols-12` layout on Live Monitor stacks awkwardly on tablet screens (768px–1024px), generating extreme page lengths where the user must scroll 3 full screens to reach the mic control and verification button.
+3. **Header Element Crowding**:
+   - On medium viewports, search bar, alerts pill, user badge, and sign-out button collide with the sidebar toggle.
+
+---
+
+### 9. Component Duplication & Dead Code
+
+An exhaustive scan reveals substantial duplicate and zombie code from earlier prototypes:
+
+| File Path | Status | Recommendation |
+|---|---|---|
+| `src/App.css` (1,124 lines) | Dead legacy SOC CSS | Remove or replace with clean, tailored utility classes |
+| `src/components/Header.tsx` | Unused duplicate header | Remove |
+| `src/components/common/Header.tsx` | Unused duplicate header | Remove |
+| `src/components/LoginModal.tsx` | Duplicate auth modal | Consolidate into clean auth |
+| `src/components/views/*` (6 files, ~75KB) | Unreferenced legacy views (`ForensicsConsoleView`, `VoiceBiometricsVaultView`, `IncidentSessionsView`, `PolicyTuningView`, `AuditLedgerView`, `AuthModal`) | Clean up / prune to prevent confusion |
+| `src/data/mockScenarios.ts` (25KB) | Unreferenced mock data with hardcoded scores | Remove completely to adhere to Real Data Rule |
+| `src/components/ThreatBadges.tsx` | Unused legacy component | Remove |
+| `src/components/AuditViewer.tsx` | Unused legacy audit viewer | Consolidate into `views/AuditView.tsx` |
+| `src/components/AudioStreamController.tsx` | Unused legacy toolbar | Remove |
+
+---
+
+### 10. Visual Consistency Problems
+
+- **Palette Clash**: Tailwind configuration defines warm palette tokens (`warm.canvas`, `terracotta`) alongside legacy slate and cyan tokens, resulting in mixed styling across pages.
+- **Shadows and Borders**: Some cards use `border-line` (`#e2e6ee`), others use `border-slate-200`, and others use no border with subtle shadows.
+- **Button Inconsistencies**: Primary buttons in `primitives.tsx` use `bg-cyan-700`, while other buttons use inline styles or secondary borders.
+- **Typography Scale**: No established font scale tokens; font weights jump between `font-medium` (500) and `font-semibold` (600) arbitrarily.
+
+---
+
+### 11. Dashboard Information Overload vs. Underload
+
+- **When Idle (No Active Call)**:
+  - The Overview shows empty statistics and a blank placeholder ("No live telemetry. Start monitoring to see risk").
+  - The Live Monitor shows an empty state with an input field for "Caller ID", giving no hint of system readiness, enrolled biometric models, or security policy status.
+- **When Active (Streaming Voice)**:
+  - The Live Monitor dumps every signal simultaneously without grouping them into Primary Verdict vs Contributing Factors.
+  - The jury cannot quickly answer the 5 core SOC questions:
+    1. *Is the session authentic or spoofed?*
+    2. *What is the numerical composite risk score?*
+    3. *Which specific AI model flagged the voice (Wav2Vec2 synthetic probability vs ECAPA voiceprint mismatch)?*
+    4. *What action is TrueVoice actively enforcing (Allow, Warn, Restrict, Block)?*
+    5. *Is the audit ledger cryptographically sealed?*
+
+---
+
+### 12. Recommended New Information Architecture & Design System
+
+#### Visual Design Theme: "TrueVoice SOC Precision"
+A modern, dark-themed SOC (Security Operations Center) visual aesthetic:
+- **Canvas / Background**: Deep space slate (`#090d16` / `#0f172a`), deep panel layers (`#131b2e` / `#1e293b`), crisp border contours (`#334155` / `rgba(255, 255, 255, 0.08)`).
+- **Semantic Risk Tokens**:
+  - `LOW` (0–29): Emerald `#10b981` (Calm, verified authentic)
+  - `MODERATE` (30–59): Amber `#f59e0b` (Elevated caution, monitoring)
+  - `HIGH` (60–79): Orange `#f97316` (High risk, verification mandatory)
+  - `CRITICAL` (80–100): Rose/Red `#ef4444` (Synthetic deepfake attack detected, restricted/blocked)
+- **Typography**: Inter / JetBrains Mono for cryptographic hashes, sequence numbers, and latency timings.
+- **Dominant Threat Center**:
+  - Prominent circular Risk Gauge with illuminated semantic arc and bold score display (`72 HIGH`).
+  - Active Trust State machine pill (`TRUSTED`, `CAUTION`, `RESTRICTED`, `BLOCKED`).
+  - Highly visible Security Action Banner with direct 1-click execution (`Dispatch Verification`, `Analyst Override`).
+- **Structured Signal Breakdown**:
+  - High-precision signal meters for Deepfake (RawNet2/AASIST/Wav2Vec2), Speaker Similarity (ECAPA-TDNN), Forensics, Conversation Threat, and Context Sensitivity.
+  - Clear label "Unavailable" for signals not provided by backend — zero fake default numbers.
+- **Focused Verification Console**:
+  - Interactive multi-step verification view with countdown bar, challenge nonce display, copyable token, OTP input, and backend validation feedback.
+- **Tamper-Evident Audit Ledger**:
+  - Formatted event cards with expandable metadata, actor badges, SHA-256 hash comparison, and 1-click cryptographic chain validation.
+- **Real Data Compliance**: Complete removal of unused mock scenarios, random hashes, and placeholder data.

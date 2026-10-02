@@ -1,8 +1,8 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'warning';
-type ButtonSize = 'sm' | 'md';
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'warning' | 'success';
+type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -11,12 +11,17 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    'bg-cyan-700 text-white hover:bg-cyan-800 disabled:bg-slate-300 disabled:text-slate-500',
+    'bg-sky-600 hover:bg-sky-500 text-white shadow-[0_0_15px_rgba(2,132,199,0.35)] border border-sky-400/30 disabled:bg-slate-800 disabled:text-slate-500 disabled:border-slate-800 disabled:shadow-none',
   secondary:
-    'bg-white text-ink border border-line hover:bg-canvas disabled:text-slate-400',
-  ghost: 'bg-transparent text-mute hover:bg-canvas hover:text-ink',
-  danger: 'bg-crit text-white hover:bg-red-800 disabled:bg-slate-300',
-  warning: 'bg-high text-white hover:bg-orange-800 disabled:bg-slate-300',
+    'bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 border border-slate-700/60 disabled:bg-slate-900 disabled:text-slate-600 disabled:border-slate-800',
+  ghost:
+    'bg-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 disabled:text-slate-600',
+  danger:
+    'bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_15px_rgba(225,29,72,0.35)] border border-rose-400/30 disabled:bg-slate-800 disabled:text-slate-500',
+  warning:
+    'bg-amber-600 hover:bg-amber-500 text-white shadow-[0_0_15px_rgba(217,119,6,0.35)] border border-amber-400/30 disabled:bg-slate-800 disabled:text-slate-500',
+  success:
+    'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_15px_rgba(5,150,105,0.35)] border border-emerald-400/30 disabled:bg-slate-800 disabled:text-slate-500',
 };
 
 export function Button({
@@ -30,8 +35,10 @@ export function Button({
     <button
       type={type}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-md font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed',
-        size === 'sm' ? 'h-8 px-3 text-xs' : 'h-9 px-3.5 text-sm',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400 disabled:cursor-not-allowed',
+        size === 'sm' && 'h-8 px-3 text-xs',
+        size === 'md' && 'h-9 px-3.5 text-sm',
+        size === 'lg' && 'h-11 px-5 text-base',
         variants[variant],
         className
       )}
@@ -43,21 +50,26 @@ export function Button({
 export function PageHeader({
   title,
   description,
+  badge,
   actions,
 }: {
   title: string;
   description?: string;
+  badge?: ReactNode;
   actions?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-800/60 pb-5">
       <div>
-        <h1 className="text-[28px] font-semibold tracking-tight text-ink">{title}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-100 sm:text-3xl font-sans">{title}</h1>
+          {badge}
+        </div>
         {description ? (
-          <p className="mt-1 max-w-2xl text-sm text-mute">{description}</p>
+          <p className="mt-1 max-w-3xl text-sm text-slate-400 leading-relaxed">{description}</p>
         ) : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex flex-wrap items-center gap-2 shrink-0">{actions}</div> : null}
     </div>
   );
 }
@@ -65,14 +77,19 @@ export function PageHeader({
 export function SectionTitle({
   title,
   description,
+  action,
 }: {
   title: string;
   description?: string;
+  action?: ReactNode;
 }) {
   return (
-    <div className="mb-3">
-      <h2 className="text-lg font-semibold text-ink">{title}</h2>
-      {description ? <p className="mt-0.5 text-sm text-mute">{description}</p> : null}
+    <div className="mb-3 flex items-baseline justify-between">
+      <div>
+        <h2 className="text-base font-semibold tracking-wide text-slate-200">{title}</h2>
+        {description ? <p className="mt-0.5 text-xs text-slate-400">{description}</p> : null}
+      </div>
+      {action}
     </div>
   );
 }
@@ -89,7 +106,7 @@ export function Panel({
   return (
     <section
       className={cn(
-        'rounded-lg border border-line bg-white',
+        'rounded-xl border border-slate-800/80 bg-slate-900/90 shadow-soc-card backdrop-blur-sm',
         padded && 'p-5',
         className
       )}
@@ -103,16 +120,19 @@ export function EmptyState({
   title,
   body,
   action,
+  icon,
 }: {
   title: string;
   body?: string;
   action?: ReactNode;
+  icon?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-start gap-2 rounded-lg border border-dashed border-line bg-white px-6 py-10">
-      <p className="text-sm font-semibold text-ink">{title}</p>
-      {body ? <p className="max-w-md text-sm text-mute">{body}</p> : null}
-      {action}
+    <div className="flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-slate-800 bg-slate-900/40 px-6 py-12">
+      {icon ? <div className="mb-3 text-slate-500">{icon}</div> : null}
+      <p className="text-base font-medium text-slate-200">{title}</p>
+      {body ? <p className="mt-1 max-w-md text-sm text-slate-400">{body}</p> : null}
+      {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
 }
@@ -127,11 +147,11 @@ export function ErrorState({
   onRetry?: () => void;
 }) {
   return (
-    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-crit" role="alert">
-      <p className="font-semibold">{title}</p>
-      {body ? <p className="mt-1 text-red-800/80">{body}</p> : null}
+    <div className="rounded-xl border border-rose-500/30 bg-rose-950/30 p-4 text-sm text-rose-200" role="alert">
+      <p className="font-semibold text-rose-300">{title}</p>
+      {body ? <p className="mt-1 text-rose-300/80">{body}</p> : null}
       {onRetry ? (
-        <Button className="mt-3" size="sm" onClick={onRetry}>
+        <Button className="mt-3" size="sm" variant="danger" onClick={onRetry}>
           Try again
         </Button>
       ) : null}
@@ -140,7 +160,7 @@ export function ErrorState({
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-md bg-slate-200/80', className)} />;
+  return <div className={cn('animate-pulse rounded-lg bg-slate-800/80', className)} />;
 }
 
 export function ModalShell({
@@ -158,34 +178,34 @@ export function ModalShell({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fadeIn"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
       <div
         className={cn(
-          'max-h-[90vh] w-full overflow-y-auto rounded-lg border border-line bg-white shadow-lg',
+          'max-h-[90vh] w-full overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 text-slate-100 shadow-2xl',
           wide ? 'max-w-3xl' : 'max-w-lg'
         )}
       >
-        <div className="flex items-start justify-between border-b border-line px-5 py-4">
+        <div className="flex items-start justify-between border-b border-slate-800 px-6 py-4">
           <div>
-            <h2 id="modal-title" className="text-base font-semibold text-ink">
+            <h2 id="modal-title" className="text-lg font-bold text-slate-100">
               {title}
             </h2>
-            {subtitle ? <p className="mt-0.5 text-xs text-mute">{subtitle}</p> : null}
+            {subtitle ? <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p> : null}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-mute hover:bg-canvas hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+            className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400"
             aria-label="Close"
           >
             ×
           </button>
         </div>
-        <div className="px-5 py-4">{children}</div>
+        <div className="p-6">{children}</div>
       </div>
     </div>
   );

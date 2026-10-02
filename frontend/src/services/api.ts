@@ -5,6 +5,7 @@
 
 import type {
   LoginRequest,
+  RegisterRequest,
   TokenResponse,
   UserResponse,
   SessionTokenResponse,
@@ -22,6 +23,7 @@ import type {
   SpeakerResponse,
   PolicyCreate,
   PolicyResponse,
+  AudioAnalysisResponse,
 } from '../types/api';
 
 class ApiError extends Error {
@@ -122,6 +124,15 @@ class ApiClient {
     const data = await this.request<TokenResponse>('/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
+    });
+    this.setAuth(data);
+    return data;
+  }
+
+  public async register(details: RegisterRequest): Promise<TokenResponse> {
+    const data = await this.request<TokenResponse>('/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(details),
     });
     this.setAuth(data);
     return data;
@@ -241,6 +252,15 @@ class ApiClient {
 
   public async enrollSpeaker(formData: FormData): Promise<SpeakerResponse> {
     return this.request<SpeakerResponse>('/v1/speakers/enroll', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  // --- Audio File Analysis Endpoints ---
+
+  public async analyzeAudio(formData: FormData): Promise<AudioAnalysisResponse> {
+    return this.request<AudioAnalysisResponse>('/v1/analyze/audio', {
       method: 'POST',
       body: formData,
     });

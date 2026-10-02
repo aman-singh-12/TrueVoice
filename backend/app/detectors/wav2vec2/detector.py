@@ -52,11 +52,11 @@ class Wav2Vec2Detector(DeepfakeDetector):
 
         try:
             import torch
-            from transformers import AutoFeatureExtractor, AutoModelForSequenceClassification
+            from transformers import AutoFeatureExtractor, AutoModelForAudioClassification
 
             logger.info(f"Loading Wav2Vec2 deepfake checkpoint '{self.checkpoint_id}' on {self.device}")
             self.processor = AutoFeatureExtractor.from_pretrained(self.checkpoint_id)
-            self.model = AutoModelForSequenceClassification.from_pretrained(self.checkpoint_id)
+            self.model = AutoModelForAudioClassification.from_pretrained(self.checkpoint_id)
 
             # Inspect model id2label mapping to identify spoof/synthetic class index
             if hasattr(self.model.config, "id2label") and self.model.config.id2label:

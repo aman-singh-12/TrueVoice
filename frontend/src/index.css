@@ -5,18 +5,40 @@
 @layer base {
   html {
     font-size: 16px;
+    color-scheme: dark;
   }
 
   body {
-    background-color: #f3f5f8;
-    color: #0f172a;
+    background-color: #090d16;
+    color: #f8fafc;
     font-family: Inter, system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
   }
 
   :focus-visible {
-    outline: 2px solid #0e7490;
+    outline: 2px solid #38bdf8;
     outline-offset: 2px;
+  }
+
+  /* Custom high-contrast scrollbars for SOC tables and panels */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #090d16;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #334155;
   }
 }
 
