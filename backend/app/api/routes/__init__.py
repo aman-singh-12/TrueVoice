@@ -11,6 +11,7 @@ from app.api.routes.risk import router as risk_router
 from app.api.routes.policies import router as policies_router
 from app.api.routes.audit import router as audit_router
 from app.api.routes.health import router as health_router
+from app.api.routes.analysis import router as analysis_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -21,5 +22,7 @@ api_router.include_router(verification_router)
 api_router.include_router(risk_router)
 api_router.include_router(policies_router)
 api_router.include_router(audit_router)
+api_router.include_router(analysis_router)
 
 __all__ = ["api_router"]
+

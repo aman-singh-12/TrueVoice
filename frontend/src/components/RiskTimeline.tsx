@@ -1,8 +1,3 @@
-/**
- * TrueVoice Real-Time Risk Progression Timeline.
- * Bounded SVG graph rendering sliding window risk score history (last 60 evaluation hops).
- */
-
 import React from 'react';
 
 export interface TimelinePoint {
@@ -20,12 +15,12 @@ export interface RiskTimelineProps {
 export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) => {
   const width = 600;
   const height = 180;
-  const padding = { top: 20, right: 20, bottom: 30, left: 40 };
+  const padding = { top: 20, right: 20, bottom: 30, left: 36 };
 
   const plotWidth = width - padding.left - padding.right;
   const plotHeight = height - padding.top - padding.bottom;
 
-  // Max points displayed: 60
+  // Max points displayed: 60 (sliding window)
   const maxPoints = 60;
   const data = history.slice(-maxPoints);
 
@@ -75,22 +70,28 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) =
   const yMod = getY(30);
 
   return (
-    <div className="risk-timeline-card" data-testid="risk-timeline">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-mute">Last evaluations</p>
-        <div className="flex gap-3 text-xs text-mute">
-          <span>Risk</span>
-          <span>Deepfake</span>
+    <div className="w-full flex flex-col gap-2" data-testid="risk-timeline">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="font-mono text-slate-400">Sliding Window (60 Hops · ~30s)</span>
+        <div className="flex items-center gap-4 font-mono text-[11px]">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-4 rounded-sm bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.6)]" />
+            <span className="text-slate-300">Composite Risk</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="h-0.5 w-4 border-t-2 border-dashed border-rose-400" />
+            <span className="text-slate-300">Deepfake Prob</span>
+          </div>
         </div>
       </div>
 
-      <div className="timeline-svg-wrapper">
-        <svg viewBox={`0 0 ${width} ${height}`} className="timeline-svg">
+      <div className="w-full rounded-lg border border-slate-800 bg-slate-950 p-2 shadow-inner">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
           <defs>
-            <linearGradient id="riskAreaGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#ef4444" stopOpacity="0.4" />
-              <stop offset="50%" stopColor="#f59e0b" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+            <linearGradient id="socRiskGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#ef4444" stopOpacity="0.45" />
+              <stop offset="50%" stopColor="#f59e0b" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0.02" />
             </linearGradient>
           </defs>
 
@@ -100,11 +101,12 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) =
             y1={yCrit}
             x2={width - padding.right}
             y2={yCrit}
-            stroke="#ef444444"
-            strokeDasharray="4 4"
+            stroke="#ef4444"
+            strokeDasharray="3 3"
             strokeWidth="1"
+            strokeOpacity="0.4"
           />
-          <text x={padding.left - 6} y={yCrit + 4} textAnchor="end" className="axis-label crit-label">
+          <text x={padding.left - 6} y={yCrit + 3} textAnchor="end" className="fill-rose-400 font-mono text-[9px]">
             80
           </text>
 
@@ -113,11 +115,12 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) =
             y1={yHigh}
             x2={width - padding.right}
             y2={yHigh}
-            stroke="#f9731644"
-            strokeDasharray="4 4"
+            stroke="#f97316"
+            strokeDasharray="3 3"
             strokeWidth="1"
+            strokeOpacity="0.4"
           />
-          <text x={padding.left - 6} y={yHigh + 4} textAnchor="end" className="axis-label high-label">
+          <text x={padding.left - 6} y={yHigh + 3} textAnchor="end" className="fill-orange-400 font-mono text-[9px]">
             60
           </text>
 
@@ -126,24 +129,25 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) =
             y1={yMod}
             x2={width - padding.right}
             y2={yMod}
-            stroke="#f59e0b44"
-            strokeDasharray="4 4"
+            stroke="#f59e0b"
+            strokeDasharray="3 3"
             strokeWidth="1"
+            strokeOpacity="0.4"
           />
-          <text x={padding.left - 6} y={yMod + 4} textAnchor="end" className="axis-label mod-label">
+          <text x={padding.left - 6} y={yMod + 3} textAnchor="end" className="fill-amber-400 font-mono text-[9px]">
             30
           </text>
 
-          {/* Bottom Baseline */}
+          {/* Baseline */}
           <line
             x1={padding.left}
             y1={getY(0)}
             x2={width - padding.right}
             y2={getY(0)}
-            stroke="#e2e8f0"
+            stroke="#334155"
             strokeWidth="1"
           />
-          <text x={padding.left - 6} y={getY(0) + 4} textAnchor="end" className="axis-label">
+          <text x={padding.left - 6} y={getY(0) + 3} textAnchor="end" className="fill-slate-500 font-mono text-[9px]">
             0
           </text>
 
@@ -151,26 +155,27 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) =
           {active && data.length > 0 && (
             <>
               {/* Area Gradient */}
-              <path d={riskAreaPath} fill="url(#riskAreaGrad)" />
+              <path d={riskAreaPath} fill="url(#socRiskGrad)" />
 
-              {/* Deepfake Probability Line (Dotted Purple) */}
+              {/* Deepfake Probability Line */}
               <path
                 d={deepfakePath}
                 fill="none"
-                stroke="#64748b"
+                stroke="#f43f5e"
                 strokeWidth="1.5"
                 strokeDasharray="3 3"
-                opacity="0.8"
+                opacity="0.85"
               />
 
-              {/* Composite Risk Line (Solid Cyan/Red) */}
+              {/* Composite Risk Line */}
               <path
                 d={riskPath}
                 fill="none"
-                stroke="#0e7490"
+                stroke="#38bdf8"
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                style={{ filter: 'drop-shadow(0 0 6px rgba(56,189,248,0.7))' }}
               />
 
               {/* Latest Point Pulse */}
@@ -178,11 +183,11 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) =
                 <circle
                   cx={getX(maxPoints - 1, maxPoints)}
                   cy={getY(data[data.length - 1].risk_score)}
-                  r="4"
-                  fill="#0e7490"
+                  r="4.5"
+                  fill="#38bdf8"
                   stroke="#ffffff"
-                  strokeWidth="1.5"
-                  className="pulse-dot"
+                  strokeWidth="2"
+                  className="animate-pulse"
                 />
               )}
             </>
@@ -193,21 +198,25 @@ export const RiskTimeline: React.FC<RiskTimelineProps> = ({ history, active }) =
               x={width / 2}
               y={height / 2}
               textAnchor="middle"
-              className="chart-empty-text"
-              fill="#4b5563"
+              className="fill-slate-500 font-mono text-xs tracking-wider uppercase"
             >
-              No live samples yet
+              Standby · Awaiting live audio stream
             </text>
           )}
         </svg>
       </div>
 
-      <div className="timeline-footer">
-        <span className="timeline-range-label">T - 30s</span>
-        <span className="timeline-samples-label">
-          {data.length > 0 ? `Seq #${data[data.length - 1].sequence_id} (${data.length} evaluations)` : 'No active stream'}
+      <div className="flex items-center justify-between font-mono text-[11px] text-slate-400 px-1">
+        <span>T - 30s</span>
+        <span>
+          {data.length > 0
+            ? `Hop #${data[data.length - 1].sequence_id} (${data.length} evals)`
+            : 'No active stream'}
         </span>
-        <span className="timeline-range-label">LIVE (Now)</span>
+        <span className="text-emerald-400 font-bold flex items-center gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+          LIVE (Now)
+        </span>
       </div>
     </div>
   );

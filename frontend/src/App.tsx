@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { AppShell } from './layout/AppShell';
 import { LoginView } from './views/LoginView';
 import { OverviewView } from './views/OverviewView';
+import { AnalyzeView } from './views/AnalyzeView';
 import { LiveMonitorView } from './views/LiveMonitorView';
 import { SessionsView } from './views/SessionsView';
 import { InvestigateView } from './views/InvestigateView';
@@ -30,14 +31,14 @@ export function App() {
 
   const onLoginSuccess = () => {
     setAuthVersion((v) => v + 1);
-    go('overview');
+    go('analyze');
   };
 
   const onLogout = () => {
     void realtime.stopSession();
     api.clearAuth();
     setAuthVersion((v) => v + 1);
-    window.location.hash = '#/overview';
+    window.location.hash = '#/analyze';
   };
 
   const startVerification = () => {
@@ -51,6 +52,9 @@ export function App() {
 
   let page: ReactNode;
   switch (route.name) {
+    case 'analyze':
+      page = <AnalyzeView />;
+      break;
     case 'monitor':
       page = <LiveMonitorView realtime={realtime} onStartVerification={startVerification} />;
       break;

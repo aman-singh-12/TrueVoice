@@ -1,5 +1,6 @@
 export type RouteName =
   | 'overview'
+  | 'analyze'
   | 'monitor'
   | 'sessions'
   | 'session'
@@ -25,6 +26,8 @@ export function parseHash(hash: string): AppRoute {
   const id = parts[1];
 
   switch (head) {
+    case 'analyze':
+      return { name: 'analyze', query };
     case 'monitor':
       return { name: 'monitor', query };
     case 'sessions':

@@ -1,14 +1,20 @@
 import { useState, type ReactNode } from 'react';
 import {
   Activity,
-  ClipboardList,
+  AlertTriangle,
+  FileAudio,
   HelpCircle,
   LayoutDashboard,
+  Menu,
   Radio,
   ScrollText,
+  Search,
   Settings,
+  Shield,
   ShieldAlert,
   ShieldCheck,
+  User,
+  X,
 } from 'lucide-react';
 import { cn } from '../lib/cn';
 import { hrefFor, type AppRoute, type RouteName } from '../lib/routing';
@@ -29,29 +35,15 @@ interface AppShellProps {
   children: ReactNode;
 }
 
-const NAV: { group: string; items: { name: RouteName; label: string; icon: typeof Radio }[] }[] = [
-  {
-    group: 'Monitor',
-    items: [
-      { name: 'overview', label: 'Overview', icon: LayoutDashboard },
-      { name: 'monitor', label: 'Live Monitor', icon: Radio },
-    ],
-  },
-  {
-    group: 'Investigate',
-    items: [
-      { name: 'sessions', label: 'Sessions', icon: Activity },
-      { name: 'incidents', label: 'Incidents', icon: ShieldAlert },
-    ],
-  },
-  {
-    group: 'Security',
-    items: [
-      { name: 'verification', label: 'Verification', icon: ShieldCheck },
-      { name: 'audit', label: 'Audit', icon: ScrollText },
-    ],
-  },
-];
+interface NavGroup {
+  group: string;
+  items: {
+    name: RouteName;
+    label: string;
+    icon: typeof Radio;
+    badge?: number;
+  }[];
+}
 
 function isActive(route: AppRoute, name: RouteName): boolean {
   if (name === 'sessions') return route.name === 'sessions' || route.name === 'session';
@@ -74,49 +66,119 @@ export function AppShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [query, setQuery] = useState(search);
 
+  const navGroups: NavGroup[] = [
+    {
+      group: 'ANALYSIS & MONITORING',
+      items: [
+        { name: 'overview', label: 'Overview', icon: LayoutDashboard },
+        { name: 'analyze', label: 'Analyze Voice', icon: FileAudio },
+        { name: 'monitor', label: 'Live Monitor', icon: Radio },
+      ],
+    },
+    {
+      group: 'INVESTIGATE',
+      items: [
+        { name: 'sessions', label: 'Sessions', icon: Activity },
+        { name: 'incidents', label: 'Incidents', icon: ShieldAlert, badge: alertCount },
+      ],
+    },
+    {
+      group: 'SECURITY',
+      items: [
+        { name: 'verification', label: 'Verification', icon: ShieldCheck },
+        { name: 'audit', label: 'Audit Ledger', icon: ScrollText },
+      ],
+    },
+    {
+      group: 'SYSTEM',
+      items: [
+        { name: 'settings', label: 'Policy & Vault', icon: Settings },
+        { name: 'help', label: 'SOC Guide', icon: HelpCircle },
+      ],
+    },
+  ];
+
   const monitorTone = monitoring ? 'ok' : streamStatus === 'ERROR' ? 'danger' : 'neutral';
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
+    <div className="min-h-screen bg-[#090d16] text-slate-100 flex">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-sky-500 focus:px-4 focus:py-2 focus:text-white focus:shadow-xl font-medium text-sm"
       >
-        Skip to content
+        Skip to main content
       </a>
 
+      {/* Mobile Backdrop */}
       {sidebarOpen ? (
         <button
           type="button"
-          className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden cursor-default"
           aria-label="Close navigation"
           onClick={() => setSidebarOpen(false)}
         />
       ) : null}
 
+      {/* Primary Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-slate-950 text-slate-200 transition-transform lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-slate-800/80 bg-[#0c1220] transition-transform duration-200 lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="flex h-14 items-center gap-2.5 border-b border-white/10 px-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-cyan-800 text-sky-200">
-            <Radio className="h-4 w-4" aria-hidden />
+        {/* Brand Header */}
+        <div className="flex h-16 items-center justify-between border-b border-slate-800/80 px-5 bg-slate-950/40">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/30 shadow-[0_0_12px_rgba(56,189,248,0.2)]">
+              <Shield className="h-5 w-5" aria-hidden />
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-base font-bold tracking-tight text-white font-sans">TrueVoice</span>
+                <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-sky-400 border border-sky-500/30">
+                  SOC
+                </span>
+              </div>
+              <p className="text-[11px] font-mono text-slate-400">Voice Trust Platform</p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-white">TrueVoice</p>
-            <p className="text-[11px] text-slate-400">Voice security</p>
-          </div>
+          <button
+            type="button"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close navigation drawer"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Primary">
-          {NAV.map((section) => (
-            <div key={section.group} className="mb-5">
-              <p className="mb-1.5 px-2 text-[11px] font-medium uppercase tracking-wide text-slate-500">
+        {/* Live Stream Quick Jump Widget in Sidebar if active */}
+        {monitoring ? (
+          <div className="mx-3 mt-3 rounded-lg border border-emerald-500/30 bg-emerald-950/30 p-2.5">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-400">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+                STREAM ACTIVE
+              </span>
+              <a
+                href={hrefFor('monitor')}
+                onClick={() => setSidebarOpen(false)}
+                className="text-[11px] font-mono text-sky-400 hover:underline"
+              >
+                View Live →
+              </a>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Navigation Sections */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6" aria-label="Primary Navigation">
+          {navGroups.map((section) => (
+            <div key={section.group}>
+              <p className="mb-2 px-2 text-[10px] font-mono font-semibold uppercase tracking-widest text-slate-400">
                 {section.group}
               </p>
-              <ul className="space-y-0.5">
+              <ul className="space-y-1">
                 {section.items.map((item) => {
                   const Icon = item.icon;
                   const active = isActive(route, item.name);
@@ -127,14 +189,27 @@ export function AppShell({
                         aria-current={active ? 'page' : undefined}
                         onClick={() => setSidebarOpen(false)}
                         className={cn(
-                          'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400',
+                          'group flex items-center justify-between rounded-lg px-3 py-2 text-xs font-medium tracking-wide transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-400',
                           active
-                            ? 'bg-white/10 text-white'
-                            : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                            ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-[0_0_12px_rgba(56,189,248,0.15)] font-semibold'
+                            : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border border-transparent'
                         )}
                       >
-                        <Icon className="h-4 w-4 shrink-0" aria-hidden />
-                        {item.label}
+                        <div className="flex items-center gap-2.5">
+                          <Icon
+                            className={cn(
+                              'h-4 w-4 shrink-0 transition-colors',
+                              active ? 'text-sky-400' : 'text-slate-400 group-hover:text-slate-300'
+                            )}
+                            aria-hidden
+                          />
+                          <span>{item.label}</span>
+                        </div>
+                        {item.badge !== undefined && item.badge > 0 ? (
+                          <span className="rounded-full bg-rose-500/20 px-2 py-0.5 text-[10px] font-mono font-bold text-rose-300 border border-rose-500/40">
+                            {item.badge}
+                          </span>
+                        ) : null}
                       </a>
                     </li>
                   );
@@ -144,90 +219,110 @@ export function AppShell({
           ))}
         </nav>
 
-        <div className="border-t border-white/10 px-3 py-3">
-          <a
-            href={hrefFor('settings')}
-            className={cn(
-              'mb-0.5 flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm',
-              route.name === 'settings' ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5'
-            )}
-          >
-            <Settings className="h-4 w-4" aria-hidden />
-            Settings
-          </a>
-          <a
-            href={hrefFor('help')}
-            className={cn(
-              'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm',
-              route.name === 'help' ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5'
-            )}
-          >
-            <HelpCircle className="h-4 w-4" aria-hidden />
-            Help
-          </a>
-        </div>
-      </aside>
-
-      <div className="lg:pl-60">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-white/90 px-4 backdrop-blur">
-          <button
-            type="button"
-            className="rounded-md p-2 text-mute hover:bg-canvas lg:hidden"
-            aria-label="Open navigation"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <ClipboardList className="h-5 w-5" />
-          </button>
-
-          <form
-            className="min-w-0 flex-1"
-            onSubmit={(e) => {
-              e.preventDefault();
-              onSearchSubmit(query.trim());
-            }}
-          >
-            <label htmlFor="global-search" className="sr-only">
-              Search sessions
-            </label>
-            <input
-              id="global-search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search sessions"
-              className="h-9 w-full max-w-md rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-700 focus:outline-none"
-            />
-          </form>
-
-          <StatusDot tone={monitorTone} label={connectionLabel(streamStatus, monitoring)} />
-
-          <a
-            href={hrefFor('incidents')}
-            className="relative rounded-md px-2 py-1 text-sm text-mute hover:bg-canvas hover:text-ink"
-          >
-            Alerts
-            {alertCount > 0 ? (
-              <span className="ml-1.5 inline-flex min-w-[1.25rem] justify-center rounded-full bg-crit px-1.5 text-[11px] font-semibold text-white">
-                {alertCount}
-              </span>
-            ) : null}
-          </a>
-
-          <div className="hidden items-center gap-2 sm:flex">
-            <div className="text-right">
-              <p className="text-xs font-medium text-ink">{user?.role?.replace(/_/g, ' ') || 'Analyst'}</p>
-              <p className="text-[11px] text-mute">{user?.user_id ? user.user_id.slice(0, 8) : 'Signed in'}</p>
+        {/* Sidebar Footer: System Diagnostics & Authenticated Identity */}
+        <div className="border-t border-slate-800/80 bg-slate-950/50 p-3">
+          <div className="flex items-center gap-2.5 rounded-lg p-2 bg-slate-900/60 border border-slate-800">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-800 text-slate-300">
+              <User className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-bold text-slate-200">
+                {user?.role?.replace(/_/g, ' ') || 'SOC Analyst'}
+              </p>
+              <p className="truncate font-mono text-[10px] text-slate-400">
+                {user?.user_id ? `ID: ${user.user_id.slice(0, 8)}` : 'Authenticated'}
+              </p>
             </div>
             <button
               type="button"
               onClick={onLogout}
-              className="rounded-md border border-line px-2.5 py-1.5 text-xs text-mute hover:bg-canvas"
+              className="rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[10px] font-mono text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+              title="Sign out of console"
             >
-              Sign out
+              Exit
             </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex flex-1 flex-col lg:pl-64 min-w-0">
+        {/* Top Header Bar */}
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-slate-800/80 bg-[#0a0f1d]/90 px-4 sm:px-6 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden"
+              aria-label="Open navigation menu"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+
+            {/* Global Search Bar */}
+            <form
+              className="relative w-full max-w-sm hidden sm:block"
+              onSubmit={(e) => {
+                e.preventDefault();
+                onSearchSubmit(query.trim());
+              }}
+            >
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <label htmlFor="global-search" className="sr-only">
+                Search sessions
+              </label>
+              <input
+                id="global-search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search sessions by ANI or ID..."
+                className="h-9 w-full rounded-lg border border-slate-800 bg-slate-900/90 pl-9 pr-3 text-xs text-slate-100 placeholder:text-slate-400 focus:border-sky-500 focus:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-sky-500"
+              />
+            </form>
+          </div>
+
+          <div className="flex items-center gap-3 sm:gap-4">
+            {/* Live Connection Status Dot */}
+            <div className="hidden xs:flex items-center rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-1.5">
+              <StatusDot
+                tone={monitorTone}
+                label={connectionLabel(streamStatus, monitoring)}
+                pulse={monitoring}
+              />
+            </div>
+
+            {/* Alerts Navigation Action */}
+            <a
+              href={hrefFor('incidents')}
+              className="relative flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/80 px-3 py-1.5 text-xs font-medium text-slate-300 hover:border-slate-700 hover:bg-slate-800 transition-colors"
+            >
+              <AlertTriangle className={cn('h-3.5 w-3.5', alertCount > 0 ? 'text-amber-400' : 'text-slate-400')} />
+              <span>Incidents</span>
+              {alertCount > 0 ? (
+                <span className="ml-1 inline-flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 font-mono text-[10px] font-bold text-white shadow-[0_0_8px_rgba(239,68,68,0.6)]">
+                  {alertCount}
+                </span>
+              ) : null}
+            </a>
+
+            {/* Live Monitor Quick CTA */}
+            <a
+              href={hrefFor('monitor')}
+              className={cn(
+                'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold tracking-wide transition-all',
+                monitoring
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                  : 'bg-sky-600 hover:bg-sky-500 text-white shadow-[0_0_12px_rgba(2,132,199,0.3)]'
+              )}
+            >
+              <Radio className={cn('h-3.5 w-3.5', monitoring && 'animate-pulse')} />
+              <span>{monitoring ? 'Live Stream' : 'Start Monitor'}</span>
+            </a>
           </div>
         </header>
 
-        <main id="main-content" className="px-4 py-6 sm:px-6 lg:px-8">
+        {/* Main Content Area */}
+        <main id="main-content" className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
       </div>
