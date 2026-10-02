@@ -20,6 +20,8 @@ Base = declarative_base()
 # Engine creation with connection pooling
 def get_engine(database_url: Optional[str] = None) -> AsyncEngine:
     url = database_url or settings.DATABASE_URL
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
     kwargs = {"echo": settings.DEBUG, "future": True}
     if url.startswith("sqlite"):
         # SQLite specific options

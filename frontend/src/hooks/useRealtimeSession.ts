@@ -53,6 +53,7 @@ export interface UseRealtimeSessionReturn {
     action: 'ANALYST_APPROVE' | 'ANALYST_RESTRICT' | 'ANALYST_BLOCK',
     reason: string
   ) => Promise<void>;
+  closeChallenge: () => void;
   clearError: () => void;
 }
 
@@ -173,8 +174,15 @@ export function useRealtimeSession(): UseRealtimeSessionReturn {
       await recorder.start();
       setIsMicActive(true);
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : (err as Error).message;
-      setError(`Failed to initiate session: ${msg}`);
+      const raw = err instanceof ApiError ? err.message : (err as Error).message;
+      const name = (err as { name?: string }).name;
+      if (name === 'NotAllowedError' || name === 'NotFoundError' || /permission|getUserMedia/i.test(raw)) {
+        setError('Microphone permission is required to start monitoring.');
+      } else if (/failed to fetch|network|load failed/i.test(raw)) {
+        setError('Unable to connect to the TrueVoice backend.');
+      } else {
+        setError(`Failed to initiate session: ${raw}`);
+      }
       stopAudioAndStream();
     }
   }, [handleTelemetry, stopAudioAndStream]);
@@ -235,7 +243,6 @@ export function useRealtimeSession(): UseRealtimeSessionReturn {
         challenge_type: 'OOB_PUSH',
       });
       setActiveChallenge(res);
-      setTrustState('VERIFYING');
       return res;
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : (err as Error).message;
@@ -258,9 +265,6 @@ export function useRealtimeSession(): UseRealtimeSessionReturn {
         });
         if (result.status === 'SUCCESS') {
           setActiveChallenge(null);
-          setTrustState('TRUSTED');
-        } else {
-          setTrustState('RESTRICTED');
         }
         return result;
       } catch (err) {
@@ -294,6 +298,10 @@ export function useRealtimeSession(): UseRealtimeSessionReturn {
     };
   }, [stopAudioAndStream]);
 
+  const closeChallenge = useCallback(() => {
+    setActiveChallenge(null);
+  }, []);
+
   return {
     session,
     status,
@@ -314,6 +322,7 @@ export function useRealtimeSession(): UseRealtimeSessionReturn {
     dispatchVerification,
     submitVerification,
     applyAnalystOverride,
+    closeChallenge,
     clearError,
   };
 }

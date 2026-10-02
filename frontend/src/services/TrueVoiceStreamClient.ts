@@ -72,10 +72,17 @@ export class TrueVoiceStreamClient {
 
       this.setStatus('CONNECTING');
 
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      // If running through Vite dev proxy or custom host
-      const host = window.location.host;
-      const wsUrl = `${protocol}//${host}/v1/stream/${this.sessionId}?token=${encodeURIComponent(this.ticketToken)}`;
+      const customWsBase = import.meta.env.VITE_WS_URL;
+      let wsUrl: string;
+      if (customWsBase && customWsBase.trim() !== '') {
+        const base = customWsBase.trim().replace(/\/+$/, '');
+        wsUrl = `${base}/v1/stream/${this.sessionId}?token=${encodeURIComponent(this.ticketToken)}`;
+      } else {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        // If running through Vite dev proxy or custom host
+        const host = window.location.host;
+        wsUrl = `${protocol}//${host}/v1/stream/${this.sessionId}?token=${encodeURIComponent(this.ticketToken)}`;
+      }
 
       try {
         this.ws = new WebSocket(wsUrl);

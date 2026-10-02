@@ -5,6 +5,7 @@
 
 import type {
   LoginRequest,
+  RegisterRequest,
   TokenResponse,
   UserResponse,
   SessionTokenResponse,
@@ -19,6 +20,10 @@ import type {
   RiskAssessmentResponse,
   AuditLogResponse,
   AuditChainValidationResult,
+  SpeakerResponse,
+  PolicyCreate,
+  PolicyResponse,
+  AudioAnalysisResponse,
 } from '../types/api';
 
 class ApiError extends Error {
@@ -36,7 +41,7 @@ class ApiError extends Error {
 class ApiClient {
   private token: string | null = null;
   private user: TokenResponse | null = null;
-  private baseUrl: string = '';
+  private baseUrl: string = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
 
   constructor() {
     // Check if previously stored in sessionStorage for persistence across page refreshes
@@ -119,6 +124,15 @@ class ApiClient {
     const data = await this.request<TokenResponse>('/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
+    });
+    this.setAuth(data);
+    return data;
+  }
+
+  public async register(details: RegisterRequest): Promise<TokenResponse> {
+    const data = await this.request<TokenResponse>('/v1/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(details),
     });
     this.setAuth(data);
     return data;
@@ -224,6 +238,51 @@ class ApiClient {
     return this.request<AuditChainValidationResult>(
       `/v1/audit/${sessionId}/verify-chain`
     );
+  }
+
+  // --- Speaker Biometrics Endpoints ---
+
+  public async listSpeakers(skip = 0, limit = 50): Promise<SpeakerResponse[]> {
+    return this.request<SpeakerResponse[]>(`/v1/speakers?skip=${skip}&limit=${limit}`);
+  }
+
+  public async getSpeaker(speakerId: string): Promise<SpeakerResponse> {
+    return this.request<SpeakerResponse>(`/v1/speakers/${speakerId}`);
+  }
+
+  public async enrollSpeaker(formData: FormData): Promise<SpeakerResponse> {
+    return this.request<SpeakerResponse>('/v1/speakers/enroll', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  // --- Audio File Analysis Endpoints ---
+
+  public async analyzeAudio(formData: FormData): Promise<AudioAnalysisResponse> {
+    return this.request<AudioAnalysisResponse>('/v1/analyze/audio', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  // --- Policy Endpoints ---
+
+  public async getActivePolicy(): Promise<PolicyResponse | null> {
+    return this.request<PolicyResponse | null>('/v1/policies');
+  }
+
+  public async createOrUpdatePolicy(data: PolicyCreate): Promise<PolicyResponse> {
+    return this.request<PolicyResponse>('/v1/policies', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // --- Health Endpoints ---
+
+  public async getHealth(): Promise<{ status: string; service: string; version: string; database: string }> {
+    return this.request<{ status: string; service: string; version: string; database: string }>('/health');
   }
 }
 

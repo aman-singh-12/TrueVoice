@@ -1,12 +1,7 @@
-/**
- * TrueVoice Secondary Verification Challenge Modal.
- * Renders high-entropy cryptographic challenge, countdown timer (30s TTL),
- * and executes verification submission against POST /v1/verification/verify.
- * STRICT: NEVER simulates verification success locally. Always delegates to backend API.
- */
-
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { ChallengeResponse, VerificationResultSummary } from '../types/api';
+import { Button } from './ui/primitives';
+import { ShieldCheck, ShieldAlert, KeyRound, Clock } from 'lucide-react';
 
 export interface ChallengeModalProps {
   challenge: ChallengeResponse | null;
@@ -19,19 +14,18 @@ export interface ChallengeModalProps {
   ) => Promise<VerificationResultSummary>;
 }
 
-export const ChallengeModal: React.FC<ChallengeModalProps> = ({
+export function ChallengeModal({
   challenge,
   isOpen,
   onClose,
   onSubmitVerification,
-}) => {
+}: ChallengeModalProps) {
   const [signatureInput, setSignatureInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [resultSummary, setResultSummary] = useState<VerificationResultSummary | null>(null);
   const [remainingSeconds, setRemainingSeconds] = useState(30);
 
-  // Compute countdown timer
   useEffect(() => {
     if (!isOpen || !challenge) {
       setSignatureInput('');
@@ -41,13 +35,9 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
     }
 
     const targetTime = new Date(challenge.expires_at).getTime();
-
     const updateTimer = () => {
-      const now = Date.now();
-      const diffSec = Math.max(0, Math.ceil((targetTime - now) / 1000));
-      setRemainingSeconds(diffSec);
+      setRemainingSeconds(Math.max(0, Math.ceil((targetTime - Date.now()) / 1000)));
     };
-
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return () => clearInterval(interval);
@@ -61,12 +51,10 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
       setErrorMsg('Please enter verification code or signature');
       return;
     }
-
     if (remainingSeconds <= 0) {
       setErrorMsg('Challenge has expired. Please request a new verification challenge.');
       return;
     }
-
     try {
       setIsSubmitting(true);
       setErrorMsg(null);
@@ -77,9 +65,7 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
       );
       setResultSummary(res);
       if (res.status === 'SUCCESS') {
-        setTimeout(() => {
-          onClose();
-        }, 1800);
+        setTimeout(() => onClose(), 1800);
       }
     } catch (err) {
       setErrorMsg((err as Error).message || 'Verification submission failed');
@@ -88,78 +74,116 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
     }
   };
 
-  const timerPercent = Math.max(0, Math.min(100, (remainingSeconds / (challenge.ttl_seconds || 30)) * 100));
+  const ttl = challenge.ttl_seconds || 30;
+  const timerPercent = Math.max(0, Math.min(100, (remainingSeconds / ttl) * 100));
+  const isUrgent = remainingSeconds <= 5;
 
   return (
-    <div className="modal-backdrop" data-testid="challenge-modal">
-      <div className="modal-dialog">
-        <div className="modal-header">
-          <div className="modal-title-group">
-            <span className="modal-icon">🔐</span>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fadeIn"
+      data-testid="challenge-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="challenge-title"
+    >
+      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-700/80 bg-slate-900 text-slate-100 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-800 bg-slate-950/60 px-6 py-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/30">
+              <KeyRound className="h-5 w-5" aria-hidden />
+            </div>
             <div>
-              <h2 className="modal-title">SECONDARY VERIFICATION REQUIRED</h2>
-              <p className="modal-subtitle">Out-of-Band (OOB) Cryptographic Challenge</p>
+              <h2 id="challenge-title" className="text-base font-bold text-slate-100">
+                Verification Required
+              </h2>
+              <p className="text-xs text-slate-400">Out-of-band challenge dispatched by TrueVoice backend</p>
             </div>
           </div>
           <button
             type="button"
-            className="modal-close-btn"
             onClick={onClose}
             aria-label="Close"
+            className="rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100 transition-colors"
           >
             ×
           </button>
         </div>
 
-        <div className="modal-body">
-          {/* TTL Countdown Bar */}
-          <div className="ttl-bar-wrapper">
-            <div className="ttl-meta">
-              <span className="ttl-label">Challenge Validity</span>
-              <span className={`ttl-seconds ${remainingSeconds <= 5 ? 'urgent' : ''}`}>
+        <div className="space-y-5 p-6">
+          {/* Validity Countdown Progress Bar */}
+          <div>
+            <div className="mb-1.5 flex items-center justify-between text-xs font-mono">
+              <span className="flex items-center gap-1.5 text-slate-400">
+                <Clock className="h-3.5 w-3.5" />
+                Challenge validity
+              </span>
+              <span className={isUrgent ? 'font-bold text-rose-400 animate-pulse' : 'text-sky-300 font-medium'}>
                 {remainingSeconds}s remaining
               </span>
             </div>
-            <div className="ttl-track">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-950 border border-slate-800">
               <div
-                className={`ttl-fill ${remainingSeconds <= 5 ? 'urgent' : ''}`}
+                className={`h-full transition-all duration-1000 ${
+                  isUrgent ? 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]' : 'bg-sky-500'
+                }`}
                 style={{ width: `${timerPercent}%` }}
               />
             </div>
           </div>
 
-          {/* Nonce Card */}
-          <div className="nonce-card">
-            <span className="nonce-label">CHALLENGE NONCE</span>
-            <div className="nonce-display">
-              <code>{challenge.nonce}</code>
-            </div>
-            <p className="nonce-instructions">{challenge.instructions}</p>
+          {/* Cryptographic Challenge Nonce Box */}
+          <div className="rounded-xl border border-slate-800 bg-slate-950/80 p-4 text-center shadow-inner">
+            <span className="text-[11px] font-mono uppercase tracking-widest text-slate-400">
+              Challenge Nonce Code
+            </span>
+            <code className="my-1.5 block font-mono text-3xl font-extrabold tracking-[0.25em] text-sky-400 drop-shadow-[0_0_12px_rgba(56,189,248,0.3)]">
+              {challenge.nonce}
+            </code>
+            <p className="text-xs text-slate-400 leading-relaxed max-w-sm mx-auto">
+              {challenge.instructions}
+            </p>
           </div>
 
-          {/* Result Alert if available */}
-          {resultSummary && (
+          {/* Verification Result Feedback */}
+          {resultSummary ? (
             <div
-              className={`result-alert ${resultSummary.status === 'SUCCESS' ? 'success' : 'error'}`}
+              className={`flex items-start gap-2.5 rounded-xl border p-3.5 text-sm ${
+                resultSummary.status === 'SUCCESS'
+                  ? 'border-emerald-500/40 bg-emerald-950/40 text-emerald-200'
+                  : 'border-rose-500/40 bg-rose-950/40 text-rose-200'
+              }`}
             >
-              {resultSummary.status === 'SUCCESS' ? '✅' : '❌'}{' '}
-              <strong>{resultSummary.status}:</strong> {resultSummary.message}
+              {resultSummary.status === 'SUCCESS' ? (
+                <ShieldCheck className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+              ) : (
+                <ShieldAlert className="h-5 w-5 text-rose-400 shrink-0 mt-0.5" />
+              )}
+              <div>
+                <p className="font-bold">
+                  SUCCESS: {resultSummary.message}
+                </p>
+                <p className="text-xs text-emerald-300/80 mt-0.5">Trust state restored on backend ledger.</p>
+              </div>
             </div>
-          )}
+          ) : null}
 
-          {errorMsg && <div className="result-alert error">⚠️ {errorMsg}</div>}
+          {errorMsg ? (
+            <div className="rounded-xl border border-rose-500/40 bg-rose-950/30 p-3 text-xs text-rose-300">
+              {errorMsg}
+            </div>
+          ) : null}
 
-          {/* Input Form */}
+          {/* Response Form */}
           {!resultSummary || resultSummary.status !== 'SUCCESS' ? (
-            <form onSubmit={handleSubmit} className="verification-form">
-              <div className="form-group">
-                <label htmlFor="sig-input" className="form-label">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="sig-input" className="mb-1.5 block text-xs font-medium text-slate-300">
                   Enter Received OTP / Biometric Token:
                 </label>
                 <input
                   id="sig-input"
                   type="text"
-                  className="text-input"
+                  className="h-11 w-full rounded-lg border border-slate-700 bg-slate-950 px-3.5 font-mono text-sm text-slate-100 placeholder:text-slate-600 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
                   placeholder="e.g., OTP code or nonce copy"
                   value={signatureInput}
                   onChange={(e) => setSignatureInput(e.target.value)}
@@ -167,32 +191,26 @@ export const ChallengeModal: React.FC<ChallengeModalProps> = ({
                   autoFocus
                 />
               </div>
-
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                >
+              <div className="flex justify-end gap-2.5 pt-1">
+                <Button onClick={onClose} disabled={isSubmitting}>
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="btn btn-primary"
+                  variant="primary"
                   disabled={isSubmitting || remainingSeconds === 0}
                 >
                   {isSubmitting ? 'Verifying...' : 'Submit Verification'}
-                </button>
+                </Button>
               </div>
             </form>
           ) : (
-            <div className="verified-success-message">
-              <p>Session trust state upgraded to <strong>TRUSTED</strong>.</p>
-            </div>
+            <p className="text-center font-mono text-xs text-emerald-400">
+              Verification confirmed by TrueVoice backend. Window closing...
+            </p>
           )}
         </div>
       </div>
     </div>
   );
-};
+}

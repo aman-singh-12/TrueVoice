@@ -1,4 +1,4 @@
-export type RiskTier = 'LOW' | 'CAUTION' | 'VERIFY' | 'CRITICAL';
+export type RiskTier = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL' | 'CAUTION' | 'VERIFY';
 
 export interface RiskFactor {
   id: string;

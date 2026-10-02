@@ -3,7 +3,8 @@
  * Matches backend schemas for auth, sessions, risk, verification, and audit ledger.
  */
 
-import type { RiskTier, TrustState } from './telemetry';
+import type { RiskTier, TrustState, SecurityActionType, SignalAvailability } from './telemetry';
+export type { RiskTier, TrustState, SecurityActionType, SignalAvailability };
 
 export type UserRole =
   | 'OPERATOR'
@@ -28,6 +29,14 @@ export type AuditEventType =
 export interface LoginRequest {
   email: string;
   password: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+  full_name: string;
+  role?: UserRole;
+  organization_name?: string;
 }
 
 export interface TokenResponse {
@@ -155,3 +164,149 @@ export interface AuditChainValidationResult {
   tampered_at_sequence: number | null;
   message: string;
 }
+
+// Speaker Biometrics
+export interface SpeakerResponse {
+  id: string;
+  org_id: string;
+  display_name: string;
+  designation: string;
+  is_active: boolean;
+  created_at: string;
+  has_enrolled_voiceprint: boolean;
+}
+
+// Policies
+export interface PolicyCreate {
+  policy_name: string;
+  caution_threshold: number;
+  verify_threshold: number;
+  block_threshold: number;
+  enforce_transaction_lock?: boolean;
+  sensitive_amount_threshold?: number;
+  oob_timeout_seconds?: number;
+  version?: string;
+}
+
+export interface PolicyResponse extends PolicyCreate {
+  id: string;
+  org_id: string;
+  created_at: string;
+}
+
+// Audio File Analysis Contracts
+export interface AudioFileMetadata {
+  filename: string;
+  size_bytes: number;
+  duration_seconds: number;
+  sample_rate: number;
+  channels: number;
+  format: string;
+}
+
+export interface DeepfakeSignalDetail {
+  score: number;
+  label: string;
+  confidence: number | null;
+  signal_availability: SignalAvailability;
+  model_name: string;
+  model_version: string;
+  inference_time_ms: number;
+}
+
+export interface SpeakerSignalDetail {
+  similarity: number | null;
+  threshold: number;
+  is_match: boolean | null;
+  confidence: number | null;
+  signal_availability: SignalAvailability;
+  model_name: string;
+  model_version: string;
+  inference_time_ms: number;
+}
+
+export interface ForensicsSignalDetail {
+  score: number;
+  signal_availability: SignalAvailability;
+  f0_mean: number | null;
+  f0_std: number | null;
+  jitter_local: number | null;
+  shimmer_local: number | null;
+  hnr_db: number | null;
+  spectral_centroid_mean: number | null;
+  spectral_rolloff_mean: number | null;
+  spectral_flux_mean: number | null;
+  rms_energy_mean: number | null;
+  anomalies_detected: string[];
+  evidence: string[];
+  model_name: string;
+  model_version: string;
+}
+
+export interface ConversationSignalDetail {
+  threat_score: number;
+  detected_intents: string[];
+  transcript: string | null;
+  language: string | null;
+  confidence: number | null;
+  signal_availability: SignalAvailability;
+  model_name: string;
+  model_version: string;
+}
+
+export interface ContextSignalDetail {
+  score: number;
+  signal_availability: SignalAvailability;
+  risk_factors: string[];
+  features: Record<string, unknown>;
+}
+
+export interface AnalysisSignals {
+  deepfake: DeepfakeSignalDetail;
+  speaker: SpeakerSignalDetail;
+  forensics: ForensicsSignalDetail;
+  conversation: ConversationSignalDetail;
+  context: ContextSignalDetail;
+}
+
+export interface AnalysisModelProvenance {
+  deepfake_model: string;
+  deepfake_model_version: string;
+  speaker_model: string;
+  speaker_model_version: string;
+  asr_model: string;
+  asr_model_version: string;
+  ml_mode: string;
+  ml_device: string;
+}
+
+export interface AudioAnalysisResponse {
+  analysis_id: string;
+  status: string;
+  created_at: string;
+  reference_audio: AudioFileMetadata;
+  suspected_audio: AudioFileMetadata;
+
+  // Primary Verdicts
+  risk_score: number;
+  risk_tier: RiskTier;
+  trust_state: TrustState;
+  security_action: SecurityActionType;
+  action_reason: string;
+  rule_matched: string;
+
+  // Evidence and Provenance
+  primary_factors: string[];
+  evidence: string[];
+
+  // Granular Signal Breakdown
+  signals: AnalysisSignals;
+
+  // Engine & Model Provenance
+  provenance: AnalysisModelProvenance;
+
+  // Execution Timing
+  pipeline_stages_completed: string[];
+  total_processing_time_ms: number;
+}
+

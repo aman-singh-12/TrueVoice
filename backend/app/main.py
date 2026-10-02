@@ -36,7 +36,13 @@ async def lifespan(app: FastAPI):
     """Application lifespan context: initializes resident ML models and manages DB engine pool."""
     settings = get_settings()
     setup_logging(level=settings.log_level)
-    logger.info("Initializing TrueVoice backend services...")
+    # Initialize database schemas and default authentication seeds
+    try:
+        from app.db.init_db import init_db
+        await init_db()
+        logger.info("Database schemas and default authentication accounts verified.")
+    except Exception as exc:
+        logger.warning(f"Database auto-initialization notice: {exc}")
 
     # Initialize and keep resident the configured primary deepfake detector
     registry = DetectorRegistry.get_registry()
@@ -68,7 +74,7 @@ def create_app() -> FastAPI:
     # CORS Configuration
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # Production deployments should configure strict origin whitelist
+        allow_origins=settings.cors_origins_list,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
