@@ -6,7 +6,7 @@ export function useHashRoute() {
 
   useEffect(() => {
     if (!window.location.hash) {
-      window.location.hash = '#/overview';
+      window.location.hash = '#/analyze';
     }
     const onChange = () => setRoute(parseHash(window.location.hash));
     window.addEventListener('hashchange', onChange);
