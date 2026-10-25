@@ -1,0 +1,33 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "feature/benchmark-security",
+    "feature/ml-detection",
+    "feature/realtime-platform",
+    "feature/risk-intelligence",
+    "feature/speaker-asr",
+    "main",
+    "origin",
+    "working_prototype_1"
+  ],
+  "parent": {
+    "feature/benchmark-security": "main",
+    "feature/ml-detection": "main",
+    "feature/realtime-platform": "main",
+    "feature/risk-intelligence": "main",
+    "feature/speaker-asr": "main",
+    "main": null,
+    "origin": "main",
+    "working_prototype_1": "main"
+  },
+  "order": [
+    "main",
+    "feature/benchmark-security",
+    "feature/ml-detection",
+    "feature/realtime-platform",
+    "feature/risk-intelligence",
+    "feature/speaker-asr",
+    "origin",
+    "working_prototype_1"
+  ]
+}

@@ -4,19 +4,91 @@ Handles JWT issuance, password verification, and short-lived WebSocket ticket ge
 """
 
 from datetime import timedelta
+import re
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.config import get_settings
-from app.core.security import verify_password, create_access_token, create_websocket_token
+from app.core.security import verify_password, hash_password, create_access_token, create_websocket_token
 from app.core.constants import Role
 from app.dependencies import get_db, get_current_user, AuthenticatedUser
+from app.models.organization import Organization
 from app.models.user import User
-from app.schemas.auth import LoginRequest, TokenResponse, UserResponse, SessionTokenRequest, SessionTokenResponse
+from app.schemas.auth import (
+    LoginRequest,
+    RegisterRequest,
+    TokenResponse,
+    UserResponse,
+    SessionTokenRequest,
+    SessionTokenResponse,
+)
 from app.services.session_service import SessionService
 
 router = APIRouter(prefix="/v1/auth", tags=["Authentication"])
+
+
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Register a new operator or analyst account with organization assignment and JWT issuance.
+    """
+    stmt = select(User).where(User.email == request.email)
+    result = await db.execute(stmt)
+    if result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An account with this email address already exists.",
+        )
+
+    org_name = (request.organization_name or "TrueVoice Security Operations").strip()
+    org_stmt = select(Organization).where(Organization.name == org_name)
+    org_res = await db.execute(org_stmt)
+    org = org_res.scalar_one_or_none()
+
+    if not org:
+        code_prefix = re.sub(r"[^A-Z0-9]", "", org_name.upper())[:8] or "TVORG"
+        tenant_code = f"{code_prefix}_{uuid.uuid4().hex[:6].upper()}"
+        org = Organization(
+            id=uuid.uuid4(),
+            name=org_name,
+            tenant_code=tenant_code,
+            is_active=True,
+        )
+        db.add(org)
+        await db.flush()
+
+    new_user = User(
+        id=uuid.uuid4(),
+        org_id=org.id,
+        email=request.email,
+        full_name=request.full_name,
+        role=request.role.value if isinstance(request.role, Role) else str(request.role),
+        password_hash=hash_password(request.password),
+        is_active=True,
+    )
+    db.add(new_user)
+    await db.commit()
+    await db.refresh(new_user)
+
+    settings = get_settings()
+    access_token = create_access_token(
+        subject=str(new_user.id),
+        org_id=str(new_user.org_id),
+        role=new_user.role,
+        secret_key=settings.secret_key,
+        expires_delta=timedelta(minutes=settings.jwt_access_token_expire_minutes),
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        token_type="bearer",
+        expires_in_minutes=settings.jwt_access_token_expire_minutes,
+        user_id=str(new_user.id),
+        org_id=str(new_user.org_id),
+        role=Role(new_user.role),
+    )
 
 
 @router.post("/login", response_model=TokenResponse)

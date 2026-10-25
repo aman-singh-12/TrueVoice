@@ -1,10 +1,3 @@
-/**
- * TrueVoice Multi-Signal Fusion Radar & Telemetry Breakdown.
- * Visualizes the 5 detection signals: Deepfake, Voice Biometrics, Forensics, Conversation, Context.
- * STRICT: Explicitly marks unavailable signals (e.g. Unenrolled voice) rather than rendering 0.
- */
-
-import React from 'react';
 import type { SignalBreakdown, RiskProvenance } from '../types/telemetry';
 
 export interface SignalRadarProps {
@@ -13,119 +6,118 @@ export interface SignalRadarProps {
   active: boolean;
 }
 
-interface SignalItemConfig {
+interface SignalDef {
   key: keyof SignalBreakdown;
   label: string;
-  description: string;
   defaultModel: string;
+  description: string;
 }
 
-const SIGNALS: SignalItemConfig[] = [
+const SIGNALS: SignalDef[] = [
   {
     key: 'deepfake',
-    label: 'SYNTHETIC SPEECH / DEEPFAKE',
-    description: 'Neural artifact & phase spoof detection',
-    defaultModel: 'Ensemble (Wav2Vec2 + RawNet2)',
+    label: 'Deepfake Probability',
+    defaultModel: 'RawNet2 / Wav2Vec2 Ensemble',
+    description: 'Acoustic artifact & spectral phase anomaly detection',
   },
   {
     key: 'speaker_similarity',
-    label: 'VOICE BIOMETRIC SIMILARITY',
-    description: 'Cosine match to enrolled reference voiceprint',
-    defaultModel: 'ECAPA-TDNN / Res2Net',
+    label: 'Speaker Verification',
+    defaultModel: 'ECAPA-TDNN Voiceprint',
+    description: 'Cosine similarity to authorized enrolled biometric profile',
   },
   {
     key: 'forensic_anomaly',
-    label: 'FORENSIC ACOUSTIC ANOMALY',
-    description: 'Codec mismatch, spectral tilt & replay artifacts',
-    defaultModel: 'DSP Acoustic Analyzer',
+    label: 'Forensics & Environment',
+    defaultModel: 'DSP Spectral Flux Analysis',
+    description: 'Background noise consistency & synthetic silence patterns',
   },
   {
     key: 'conversational_threat',
-    label: 'CONVERSATIONAL THREAT',
-    description: 'Social engineering urgency & credential extraction',
-    defaultModel: 'FastWhisper + Intent Classifier',
+    label: 'Conversational Threat',
+    defaultModel: 'Whisper + NLP Threat Intent',
+    description: 'Social engineering keywords (OTP, Wire, Impersonation)',
   },
   {
     key: 'context_sensitivity',
-    label: 'CONTEXT SENSITIVITY',
-    description: 'Target transaction value & operational posture',
-    defaultModel: 'Context Risk Matrix',
+    label: 'Context Sensitivity',
+    defaultModel: 'Policy Context Engine',
+    description: 'Transaction value & high-risk action flags',
   },
 ];
 
-export const SignalRadar: React.FC<SignalRadarProps> = ({
-  breakdown,
-  provenance,
-  active,
-}) => {
+export function SignalRadar({ breakdown, provenance, active }: SignalRadarProps) {
   return (
-    <div className="signal-radar-card" data-testid="signal-radar">
-      <div className="card-header">
-        <h3 className="card-title">MULTI-SIGNAL FUSION TELEMETRY</h3>
-        <span className="card-subtitle">5-Signal Decomposition Pipeline</span>
-      </div>
-
-      <div className="signal-list">
+    <div data-testid="signal-radar" className="w-full space-y-4">
+      <div className="grid gap-3 sm:grid-cols-1">
         {SIGNALS.map((sig) => {
           const rawValue = breakdown ? breakdown[sig.key] : null;
           const sigProv = provenance ? provenance[sig.key] : undefined;
-
-          // Check if signal is unavailable or un-enrolled
           const isUnavailable =
             rawValue === null ||
             rawValue === undefined ||
             sigProv?.signal_availability === 'UNAVAILABLE';
-
-          // Score as percentage
-          const percent = !isUnavailable && rawValue !== null ? Math.round(rawValue * 100) : 0;
-
-          // Determine signal status color
-          let barColor = '#3b82f6';
-          if (percent >= 70) barColor = '#ef4444';
-          else if (percent >= 40) barColor = '#f59e0b';
-          else barColor = '#10b981';
-
+          const percent = !isUnavailable && rawValue !== null ? Math.round(Number(rawValue) * 100) : null;
           const modelName = sigProv?.model_name || sig.defaultModel;
-          const weightApplied =
-            sigProv?.weight_applied !== undefined
-              ? (sigProv.weight_applied * 100).toFixed(0) + '%'
-              : null;
+
+          // Semantic color based on signal severity
+          const barColor =
+            percent === null
+              ? 'bg-slate-700'
+              : percent >= 80
+              ? 'bg-rose-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]'
+              : percent >= 60
+              ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]'
+              : percent >= 30
+              ? 'bg-amber-500'
+              : 'bg-emerald-500';
 
           return (
-            <div key={sig.key} className="signal-row" data-testid={`signal-${sig.key}`}>
-              <div className="signal-meta">
-                <div className="signal-title-group">
-                  <span className="signal-name">{sig.label}</span>
-                  <span className="signal-model">{modelName}</span>
+            <div
+              key={sig.key}
+              data-testid={`signal-${sig.key}`}
+              className="rounded-lg border border-slate-800/80 bg-slate-950/50 p-3 hover:border-slate-700 transition-colors"
+            >
+              <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold tracking-wide text-slate-200 uppercase">
+                      {sig.label}
+                    </span>
+                    <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-mono text-slate-400">
+                      {modelName}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-slate-400 truncate">{sig.description}</p>
                 </div>
-                <div className="signal-value-group">
+
+                <div className="shrink-0 text-right">
                   {isUnavailable ? (
-                    <span className="signal-badge unavailable">N/A (UNENROLLED)</span>
+                    <span className="inline-block rounded border border-slate-800 bg-slate-900/80 px-2 py-0.5 text-xs font-mono font-medium text-slate-400">
+                      Unavailable
+                    </span>
                   ) : (
-                    <>
-                      <span className="signal-score" style={{ color: active ? barColor : '#64748b' }}>
-                        {active ? `${percent}%` : '--'}
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-mono text-sm font-bold tracking-tight text-slate-100">
+                        {active && percent !== null ? `${percent}%` : '--'}
                       </span>
-                      {weightApplied && (
-                        <span className="signal-weight">wt: {weightApplied}</span>
-                      )}
-                    </>
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="signal-bar-track">
-                {!isUnavailable && active ? (
+              {/* High precision calibrated gauge bar */}
+              <div
+                className="h-2 w-full overflow-hidden rounded-full bg-slate-900 border border-slate-800"
+                aria-hidden
+              >
+                {!isUnavailable && active && percent !== null ? (
                   <div
-                    className="signal-bar-fill"
-                    style={{
-                      width: `${percent}%`,
-                      backgroundColor: barColor,
-                      boxShadow: `0 0 8px ${barColor}66`,
-                    }}
+                    className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+                    style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
                   />
                 ) : (
-                  <div className="signal-bar-empty" />
+                  <div className="h-full w-0" />
                 )}
               </div>
             </div>
@@ -134,4 +126,4 @@ export const SignalRadar: React.FC<SignalRadarProps> = ({
       </div>
     </div>
   );
-};
+}

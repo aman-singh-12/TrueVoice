@@ -27,7 +27,7 @@ export type SignalAvailability = 'AVAILABLE' | 'UNAVAILABLE' | 'LOW_CONFIDENCE';
 
 export interface SignalBreakdown {
   deepfake: number;
-  speaker_similarity: number;
+  speaker_similarity: number | null;
   forensic_anomaly: number;
   conversational_threat: number;
   context_sensitivity: number;
